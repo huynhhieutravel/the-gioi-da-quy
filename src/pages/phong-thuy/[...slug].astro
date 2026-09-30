@@ -1,0 +1,34 @@
+---
+import { getDb } from '../../lib/db';
+import { slugify } from '../../lib/helpers';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+let rawSlug = Astro.params.slug || '';
+
+// Clean up raw slug (e.g. Phat-ban-menh-tuoi-Hoi-A-Di-Da-da-mat-ho-3359.html)
+let cleaned = rawSlug.replace(/\.html$/i, '').trim();
+
+// Strip trailing numeric ID if attached
+const cleanSlugWithoutId = cleaned.replace(/-\d+$/, '');
+const normalizedSlug = slugify(cleanSlugWithoutId);
+
+// First check exact slug match
+let matchedProduct = await db.prepare('SELECT id, slug FROM products WHERE slug = ?').bind(normalizedSlug).first<any>();
+
+// If not exact, try prefix or like match
+if (!matchedProduct) {
+  const shortPrefix = normalizedSlug.split('-').slice(0, 4).join('-');
+  matchedProduct = await db.prepare('SELECT id, slug FROM products WHERE slug LIKE ? OR slug LIKE ? LIMIT 1')
+    .bind(`${normalizedSlug}%`, `%${shortPrefix}%`)
+    .first<any>();
+}
+
+if (matchedProduct) {
+  return Astro.redirect(`/san-pham/${matchedProduct.slug}`, 301);
+}
+
+// Fallback to Products catalog
+return Astro.redirect('/san-pham', 301);
+---

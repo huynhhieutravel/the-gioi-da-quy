@@ -1,0 +1,51 @@
+---
+import { getDb } from '../../lib/db';
+import { slugify } from '../../lib/helpers';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+let rawSlug = Astro.params.slug || '';
+
+// Clean up raw slug
+// Example 1: Tac-dung-cua-3-loai-da-phong-thuy-pho-bien-hien-nay-2014.html
+// Example 2: Chinh-Sach-va-Quy-Dinh-Chung-1994.html
+let cleaned = rawSlug.replace(/\.html$/i, '').trim();
+
+// Strip trailing numeric ID if attached (e.g. -2014, -1994)
+const cleanSlugWithoutId = cleaned.replace(/-\d+$/, '');
+const normalizedSlug = slugify(cleanSlugWithoutId);
+
+// Static alias mapping for legacy news URLs
+const legacyMap: Record<string, string> = {
+  'chinh-sach-va-quy-dinh-chung': '/chinh-sach-va-quy-dinh',
+  'hinh-thuc-thanh-toan': '/hinh-thuc-thanh-toan',
+  'chinh-sach-giao-nhan': '/giao-nhan',
+  'cau-hoi-thuong-gap': '/cau-hoi-thuong-gap',
+  'thong-tin-lien-he': '/lien-he',
+  'gioi-thieu': '/gioi-thieu'
+};
+
+if (legacyMap[normalizedSlug]) {
+  return Astro.redirect(legacyMap[normalizedSlug], 301);
+}
+
+// Check database for matching post or article
+let matchedPost = await db.prepare('SELECT id, slug, is_page FROM posts WHERE slug = ?').bind(normalizedSlug).first<any>();
+
+if (!matchedPost) {
+  // Try matching with partial slug or like query
+  matchedPost = await db.prepare('SELECT id, slug, is_page FROM posts WHERE slug LIKE ? LIMIT 1').bind(`%${normalizedSlug.slice(0, 20)}%`).first<any>();
+}
+
+if (matchedPost) {
+  if (matchedPost.is_page === 1) {
+    return Astro.redirect(`/${matchedPost.slug}`, 301);
+  } else {
+    return Astro.redirect(`/kien-thuc/${matchedPost.slug}`, 301);
+  }
+}
+
+// Fallback to Knowledge hub
+return Astro.redirect('/kien-thuc', 301);
+---

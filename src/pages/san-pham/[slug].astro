@@ -1,0 +1,274 @@
+---
+import StoreLayout from '../../layouts/StoreLayout.astro';
+import { getDb } from '../../lib/db';
+import { renderMarkdown } from '../../lib/helpers';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+const { slug } = Astro.params;
+
+const product = await db.prepare('SELECT * FROM products WHERE slug = ?').bind(slug).first<any>();
+
+if (!product) {
+  return Astro.rewrite('/404');
+}
+
+// Increment view count asynchronously
+db.prepare('UPDATE products SET views = views + 1 WHERE id = ?').bind(product.id).run();
+
+// Related products
+const relatedProducts = (await db.prepare(`
+  SELECT id, slug, name, price_text, gemstone_type, feng_shui_element, thumbnail
+  FROM products
+  WHERE category_name = ? AND id != ?
+  LIMIT 4
+`).bind(product.category_name, product.id).all<any>()).results || [];
+
+const settingsRows = (await db.prepare('SELECT key, value FROM settings').all<{ key: string; value: string }>()).results || [];
+const s: Record<string, string> = {};
+for (const r of settingsRows) s[r.key] = r.value;
+const hotline = s.hotline || '0909.468.057';
+
+const badgeClass = product.feng_shui_element === 'Kim' ? 'badge-kim'
+  : product.feng_shui_element === 'Mộc' ? 'badge-moc'
+  : product.feng_shui_element === 'Thủy' ? 'badge-thuy'
+  : product.feng_shui_element === 'Hỏa' ? 'badge-hoa'
+  : product.feng_shui_element === 'Thổ' ? 'badge-tho' : 'badge-damenh';
+
+const renderedContent = renderMarkdown(product.content || product.short_description || '');
+---
+
+<StoreLayout 
+  title={product.seo_title || product.name} 
+  description={product.seo_description || product.short_description}
+  activeNav="products"
+>
+  <div class="container" style="padding: 40px 24px;">
+    <!-- BREADCRUMB -->
+    <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 24px;">
+      <a href="/" style="color: var(--text-muted); text-decoration: none;">Trang Chủ</a> / 
+      <a href="/san-pham" style="color: var(--text-muted); text-decoration: none;">Sản Phẩm Phong Thủy</a> / 
+      <a href={`/san-pham?cat=${encodeURIComponent(product.category_name)}`} style="color: var(--text-muted); text-decoration: none;">{product.category_name}</a> / 
+      <span style="color: #fff; font-weight: 600;">{product.name}</span>
+    </div>
+
+    <!-- PRODUCT DETAIL GRID -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: flex-start; margin-bottom: 60px;">
+      <!-- LEFT: IMAGE GALLERY -->
+      <div>
+        <div style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 16px; overflow: hidden; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; position: relative;">
+          <img 
+            id="main-product-img" 
+            src={product.thumbnail || '/placeholder-gem.jpg'} 
+            alt={product.name} 
+            style="width: 100%; height: 100%; object-fit: contain; max-height: 520px;" 
+          />
+          <span class={`product-element-tag ${badgeClass}`} style="top: 16px; left: 16px; font-size: 13px;">
+            Mệnh {product.feng_shui_element}
+          </span>
+        </div>
+      </div>
+
+      <!-- RIGHT: DETAILS & CTAS -->
+      <div>
+        <span style="font-size: 13px; text-transform: uppercase; color: var(--gold-accent); letter-spacing: 1px; font-weight: 700;">
+          {product.gemstone_type} • SKU: {product.sku}
+        </span>
+        <h1 style="font-family: var(--font-heading); font-size: 28px; color: #fff; margin: 8px 0 16px; line-height: 1.3;">
+          {product.name}
+        </h1>
+
+        <!-- PRICE & STOCK -->
+        <div style="display: flex; align-items: center; gap: 20px; padding: 16px 20px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid var(--store-border); margin-bottom: 24px;">
+          <div>
+            <span style="display: block; font-size: 11px; text-transform: uppercase; color: var(--text-dim);">Giá niêm yết:</span>
+            <span style="font-size: 28px; font-weight: 800; color: var(--gold-accent);">{product.price_text}</span>
+          </div>
+          {product.original_price > product.price && product.price > 0 && (
+            <div style="border-left: 1px solid var(--store-border); padding-left: 16px;">
+              <span style="display: block; font-size: 11px; text-transform: uppercase; color: var(--text-dim);">Giá gốc:</span>
+              <span style="font-size: 16px; text-decoration: line-through; color: var(--text-muted);">{new Intl.NumberFormat('vi-VN').format(product.original_price)} ₫</span>
+            </div>
+          )}
+          <div style="margin-left: auto;">
+            <span class={`badge ${product.stock_status === 'in_stock' ? 'badge-stock-in' : 'badge-stock-out'}`}>
+              {product.stock_status === 'in_stock' ? 'Còn hàng tại Showroom' : 'Tạm hết hàng'}
+            </span>
+          </div>
+        </div>
+
+        <!-- SHORT DESCRIPTION -->
+        <p style="font-size: 14px; color: var(--text-muted); line-height: 1.7; margin-bottom: 24px;">
+          {product.short_description}
+        </p>
+
+        <!-- SPECIFICATIONS TABLE -->
+        <div style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 12px; overflow: hidden; margin-bottom: 28px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <tbody>
+              <tr style="border-bottom: 1px solid var(--store-border);">
+                <td style="padding: 10px 16px; color: var(--text-dim); width: 140px;">Chất liệu đá:</td>
+                <td style="padding: 10px 16px; color: #fff; font-weight: 600;">{product.gemstone_type}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--store-border);">
+                <td style="padding: 10px 16px; color: var(--text-dim);">Ngũ Hành hợp:</td>
+                <td style="padding: 10px 16px; color: #fff; font-weight: 600;">
+                  <span class={`badge ${badgeClass}`}>Mệnh {product.feng_shui_element}</span>
+                </td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--store-border);">
+                <td style="padding: 10px 16px; color: var(--text-dim);">Tuổi bản mệnh:</td>
+                <td style="padding: 10px 16px; color: #fff;">{product.target_zodiac}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--store-border);">
+                <td style="padding: 10px 16px; color: var(--text-dim);">Kích thước:</td>
+                <td style="padding: 10px 16px; color: #fff;">{product.dimensions || 'Chuẩn kích thước phong thủy'}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--store-border);">
+                <td style="padding: 10px 16px; color: var(--text-dim);">Trọng lượng:</td>
+                <td style="padding: 10px 16px; color: #fff;">{product.weight || 'Đang cập nhật'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 16px; color: var(--text-dim);">Giám định:</td>
+                <td style="padding: 10px 16px; color: var(--emerald-light); font-weight: 600;">
+                  {product.certification || 'Cam kết 100% đá thiên nhiên'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div style="display: flex; gap: 14px;">
+          <button type="button" class="btn-gold" style="flex: 2; padding: 14px 20px; font-size: 15px; justify-content: center;" onclick="openOrderModal()">
+            🛒 Đặt Mua / Nhận Tư Vấn Ngay
+          </button>
+          <a 
+            href={`https://zalo.me/${hotline.replace(/[^0-9]/g, '')}`} 
+            target="_blank" 
+            class="btn-primary" 
+            style="flex: 1; padding: 14px 16px; font-size: 14px; justify-content: center; background: #0068ff;"
+          >
+            💬 Tư Vấn Zalo
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULL DESCRIPTION & FENG SHUI MEANING -->
+    <div style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 16px; padding: 36px; margin-bottom: 60px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--store-border); padding-bottom: 14px; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+        <h3 style="font-family: var(--font-heading); font-size: 24px; color: #fff; margin: 0;">
+          Ý Nghĩa Phong Thủy & Tác Dụng Năng Lượng
+        </h3>
+        <span style="font-size: 13px; color: var(--gold-accent); display: flex; align-items: center; gap: 6px;">
+          ✓ Đá Quý Phong Thủy Hoa Mộc Lan - Tự Nhiên 100%
+        </span>
+      </div>
+
+      <div class="prose-content" set:html={renderedContent} />
+    </div>
+
+    <!-- RELATED PRODUCTS -->
+    {relatedProducts.length > 0 && (
+      <div>
+        <h3 style="font-family: var(--font-heading); font-size: 22px; color: #fff; margin-bottom: 24px;">
+          Sản Phẩm Cùng Dòng {product.category_name}
+        </h3>
+        <div class="products-grid">
+          {relatedProducts.map((rp) => (
+            <div class="product-card">
+              <div class="product-card-thumb">
+                <img src={rp.thumbnail || '/placeholder-gem.jpg'} alt={rp.name} loading="lazy" />
+              </div>
+              <div class="product-card-body">
+                <span class="product-cat-label">{rp.gemstone_type}</span>
+                <a href={`/san-pham/${rp.slug}`} class="product-card-title">{rp.name}</a>
+                <div class="product-price-box">
+                  <span class="price-current">{rp.price_text}</span>
+                  <a href={`/san-pham/${rp.slug}`} class="btn-detail-link">Xem</a>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+
+  <!-- ORDER & CONSULTATION MODAL -->
+  <dialog id="order-modal" style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 16px; padding: 32px; max-width: 520px; width: 90%; color: #fff; margin: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <div>
+        <h3 style="font-size: 18px; color: #fff;">Đặt Mua & Nhận Tư Vấn</h3>
+        <span style="font-size: 12px; color: var(--gold-accent);">{product.name}</span>
+      </div>
+      <button type="button" class="btn-secondary" onclick="document.getElementById('order-modal').close()">✕</button>
+    </div>
+
+    <form onsubmit="handleSendInquiry(event)">
+      <input type="hidden" name="product_id" value={product.id} />
+      <input type="hidden" name="product_name" value={product.name} />
+
+      <div class="form-group">
+        <label for="inq_name">Họ và Tên của Quý Khách <span style="color: var(--ruby-500);">*</span></label>
+        <input type="text" id="inq_name" name="customer_name" required placeholder="VD: Nguyễn Văn A" class="form-control" />
+      </div>
+
+      <div class="form-group">
+        <label for="inq_phone">Số Điện Thoại / Zalo Nhận Tư Vấn <span style="color: var(--ruby-500);">*</span></label>
+        <input type="tel" id="inq_phone" name="phone" required placeholder="VD: 0909.xxx.xxx" class="form-control" />
+      </div>
+
+      <div class="form-group">
+        <label for="inq_msg">Năm Sinh Hoặc Ghi Chú Yêu Cầu</label>
+        <textarea id="inq_msg" name="message" placeholder="VD: Tôi sinh năm 1988 (Mậu Thìn), muốn tư vấn xem vật phẩm này có hợp mệnh không và kiểm tra hàng trước khi nhận..." class="form-control" style="min-height: 80px;"></textarea>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('order-modal').close()" style="flex: 1;">Hủy</button>
+        <button type="submit" class="btn-gold" id="btn-submit-inquiry" style="flex: 2; justify-content: center;">
+          Gửi Yêu Cầu Ngay
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <script is:inline>
+    function openOrderModal() {
+      document.getElementById('order-modal').showModal();
+    }
+
+    async function handleSendInquiry(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit-inquiry');
+      btn.disabled = true;
+      btn.innerText = 'Đang gửi...';
+
+      const formData = new FormData(e.target);
+      const payload = Object.fromEntries(formData.entries());
+
+      try {
+        const res = await fetch('/api/store/inquire', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Cảm ơn Quý khách! Showroom Phong Thủy Hoa Mộc Lan đã nhận được thông tin và sẽ liên hệ tư vấn trong ít phút qua số điện thoại/Zalo của Quý khách.');
+          document.getElementById('order-modal').close();
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Không thể gửi yêu cầu'));
+          btn.disabled = false;
+          btn.innerText = 'Gửi Yêu Cầu Ngay';
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+        btn.disabled = false;
+        btn.innerText = 'Gửi Yêu Cầu Ngay';
+      }
+    }
+  </script>
+</StoreLayout>

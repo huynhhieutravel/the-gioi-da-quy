@@ -1,0 +1,353 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getDb } from '../../lib/db';
+import { formatVND } from '../../lib/helpers';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+
+// 1. Core KPIs
+const prodCount = (await db.prepare('SELECT COUNT(*) as count FROM products').first<{ count: number }>())?.count || 0;
+const catCount = (await db.prepare('SELECT COUNT(*) as count FROM categories').first<{ count: number }>())?.count || 0;
+const postCount = (await db.prepare('SELECT COUNT(*) as count FROM posts').first<{ count: number }>())?.count || 0;
+const mediaCount = (await db.prepare('SELECT COUNT(*) as count FROM media').first<{ count: number }>())?.count || 0;
+const inqTotal = (await db.prepare('SELECT COUNT(*) as count FROM inquiries').first<{ count: number }>())?.count || 0;
+const inqNew = (await db.prepare("SELECT COUNT(*) as count FROM inquiries WHERE status = 'new'").first<{ count: number }>())?.count || 0;
+
+// 2. Feng Shui Element Distribution
+const elementStats = (await db.prepare(`
+  SELECT feng_shui_element, COUNT(*) as count 
+  FROM products 
+  WHERE feng_shui_element IS NOT NULL 
+  GROUP BY feng_shui_element 
+  ORDER BY count DESC
+`).all<{ feng_shui_element: string; count: number }>()).results || [];
+
+// 3. Top Categories
+const topCategories = (await db.prepare(`
+  SELECT category_name, COUNT(*) as count 
+  FROM products 
+  GROUP BY category_name 
+  ORDER BY count DESC 
+  LIMIT 5
+`).all<{ category_name: string; count: number }>()).results || [];
+
+// 4. Recent Products (Last 6)
+const recentProducts = (await db.prepare(`
+  SELECT id, slug, name, sku, price_text, category_name, gemstone_type, feng_shui_element, thumbnail, stock_status, is_featured
+  FROM products 
+  ORDER BY id ASC 
+  LIMIT 6
+`).all<any>()).results || [];
+
+// 5. Recent Inquiries (Last 4)
+const recentInquiries = (await db.prepare(`
+  SELECT id, customer_name, phone, zalo, product_name, message, status, created_at
+  FROM inquiries 
+  ORDER BY created_at DESC 
+  LIMIT 4
+`).all<any>()).results || [];
+---
+
+<AdminLayout title="Bảng Điều Khiển" activeNav="dashboard">
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="page-title">
+      <h2>Bảng Điều Khiển Quản Trị Showroom</h2>
+      <p>Hệ thống CMS Đá Quý & Phong Thủy Hoa Mộc Lan • Vận hành trên Cloudflare SSR</p>
+    </div>
+    <div class="page-actions">
+      <a href="/admin/products/new" class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>+ Thêm Sản Phẩm Mới</span>
+      </a>
+      <a href="/" target="_blank" class="btn-secondary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" x2="21" y1="14" y2="3"></line>
+        </svg>
+        <span>Xem Showroom</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- KPI METRICS GRID -->
+  <div class="metrics-grid">
+    <div class="metric-card emerald">
+      <div class="metric-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m7.5 4.27 9 5.15"></path>
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path>
+          <path d="m3.3 7 8.7 5 8.7-5"></path>
+          <path d="M12 22V12"></path>
+        </svg>
+      </div>
+      <div class="metric-data">
+        <h3>{prodCount}</h3>
+        <p>Sản Phẩm Phong Thủy</p>
+      </div>
+    </div>
+
+    <div class="metric-card gold">
+      <div class="metric-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+        </svg>
+      </div>
+      <div class="metric-data">
+        <h3>{catCount}</h3>
+        <p>Chủng Loại Đá Quý</p>
+      </div>
+    </div>
+
+    <div class="metric-card ruby">
+      <div class="metric-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+        </svg>
+      </div>
+      <div class="metric-data">
+        <h3>{inqTotal} <span style="font-size: 14px; color: #f87171; font-weight: normal;">({inqNew} mới)</span></h3>
+        <p>Đơn Khách Hàng Tư Vấn</p>
+      </div>
+    </div>
+
+    <div class="metric-card sapphire">
+      <div class="metric-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+          <circle cx="9" cy="9" r="2"></circle>
+          <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+        </svg>
+      </div>
+      <div class="metric-data">
+        <h3>{mediaCount}</h3>
+        <p>Hình Ảnh Đã Index</p>
+      </div>
+    </div>
+
+    <div class="metric-card amethyst">
+      <div class="metric-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+        </svg>
+      </div>
+      <div class="metric-data">
+        <h3>{postCount}</h3>
+        <p>Bài Viết & Trang Tĩnh</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2-COLUMN SECTION: FENG SHUI MATRIX & TOP CATEGORIES -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px;">
+    <!-- NGŨ HÀNH DISTRIBUTION -->
+    <div class="admin-card">
+      <div class="card-header-clean">
+        <h3>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: var(--gold-400);">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+          Phân Bổ Sản Phẩm Theo Ngũ Hành
+        </h3>
+        <span style="font-size: 12px; color: var(--text-dim);">Chuẩn quy luật Kim - Mộc - Thủy - Hỏa - Thổ</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        {elementStats.map((el) => {
+          const percent = Math.round((el.count / (prodCount || 1)) * 100);
+          const badgeClass = el.feng_shui_element === 'Kim' ? 'badge-kim'
+            : el.feng_shui_element === 'Mộc' ? 'badge-moc'
+            : el.feng_shui_element === 'Thủy' ? 'badge-thuy'
+            : el.feng_shui_element === 'Hỏa' ? 'badge-hoa'
+            : el.feng_shui_element === 'Thổ' ? 'badge-tho' : 'badge-damenh';
+          
+          return (
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+                <span class={`badge ${badgeClass}`}>Mệnh {el.feng_shui_element}</span>
+                <span style="color: var(--text-muted); font-weight: 600;">{el.count} sản phẩm ({percent}%)</span>
+              </div>
+              <div style="width: 100%; height: 7px; background: #1e293b; border-radius: 4px; overflow: hidden;">
+                <div style={`width: ${percent}%; height: 100%; border-radius: 4px; background: ${
+                  el.feng_shui_element === 'Kim' ? '#e2e8f0'
+                  : el.feng_shui_element === 'Mộc' ? '#10b981'
+                  : el.feng_shui_element === 'Thủy' ? '#3b82f6'
+                  : el.feng_shui_element === 'Hỏa' ? '#ef4444'
+                  : el.feng_shui_element === 'Thổ' ? '#f59e0b' : '#a855f7'
+                }; transition: width 0.5s ease;`}></div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    <!-- TOP CATEGORIES -->
+    <div class="admin-card">
+      <div class="card-header-clean">
+        <h3>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: var(--emerald-400);">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+          </svg>
+          Dòng Đá Chủ Lực Tại Showroom
+        </h3>
+        <a href="/admin/categories" style="font-size: 12px; color: var(--emerald-400); text-decoration: none;">Xem tất cả (15) →</a>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        {topCategories.map((cat, idx) => (
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255, 255, 255, 0.02); border-radius: 8px; border: 1px solid var(--border-subtle);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 13px; font-weight: 700; color: #2563eb; width: 20px;">0{idx + 1}</span>
+              <span style="font-weight: 600; color: #0f172a; font-size: 14px;">{cat.category_name}</span>
+            </div>
+            <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #059669; font-weight: 600;">
+              {cat.count} vật phẩm
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <!-- RECENT CUSTOMER INQUIRIES -->
+  <div class="admin-card">
+    <div class="card-header-clean">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: var(--ruby-500);">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+        </svg>
+        Khách Hàng Yêu Cầu Tư Vấn & Đặt Mua Mới
+      </h3>
+      <a href="/admin/inquiries" style="font-size: 12px; color: #2563eb; font-weight: 600; text-decoration: none;">Xem tất cả đơn →</a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Khách Hàng</th>
+            <th>Số Điện Thoại / Zalo</th>
+            <th>Vật Phẩm Quan Tâm</th>
+            <th>Nội Dung Yêu Cầu</th>
+            <th>Trạng Thái</th>
+            <th>Hành Động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {recentInquiries.map((inq) => (
+            <tr>
+              <td>
+                <strong style="color: #0f172a; font-weight: 600;">{inq.customer_name}</strong>
+              </td>
+              <td>
+                <span style="font-family: monospace; color: #2563eb; font-weight: 700;">{inq.phone}</span>
+              </td>
+              <td style="max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {inq.product_name}
+              </td>
+              <td style="max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-dim);">
+                {inq.message}
+              </td>
+              <td>
+                <span class={`badge ${inq.status === 'new' ? 'badge-stock-out' : inq.status === 'contacted' ? 'badge-stock-pre' : 'badge-stock-in'}`}>
+                  {inq.status === 'new' ? 'Mới' : inq.status === 'contacted' ? 'Đã Liên Hệ' : 'Hoàn Tất'}
+                </span>
+              </td>
+              <td>
+                <a href={`https://zalo.me/${inq.phone.replace(/[^0-9]/g, '')}`} target="_blank" class="btn-secondary" style="padding: 4px 10px; font-size: 11px;">
+                  💬 Chat Zalo
+                </a>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RECENT PRODUCTS LIST -->
+  <div class="admin-card">
+    <div class="card-header-clean">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: var(--emerald-400);">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        </svg>
+        Sản Phẩm Đá Quý Vừa Cập Nhật
+      </h3>
+      <a href="/admin/products" style="font-size: 12px; color: var(--emerald-400); text-decoration: none;">Xem toàn bộ 47 sản phẩm →</a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Sản Phẩm</th>
+            <th>Chủng Loại</th>
+            <th>Ngũ Hành</th>
+            <th>Giá Bán</th>
+            <th>Tình Trạng</th>
+            <th>Hành Động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {recentProducts.map((p) => {
+            const badgeClass = p.feng_shui_element === 'Kim' ? 'badge-kim'
+              : p.feng_shui_element === 'Mộc' ? 'badge-moc'
+              : p.feng_shui_element === 'Thủy' ? 'badge-thuy'
+              : p.feng_shui_element === 'Hỏa' ? 'badge-hoa'
+              : p.feng_shui_element === 'Thổ' ? 'badge-tho' : 'badge-damenh';
+
+            return (
+              <tr>
+                <td>
+                  <div class="cell-product">
+                    <img src={p.thumbnail || '/placeholder-gem.jpg'} alt={p.name} class="product-thumb-sm" loading="lazy" />
+                    <div class="product-meta-cell">
+                      <a href={`/admin/products/edit?id=${p.id}`} class="product-title-link">{p.name}</a>
+                      <span class="product-sku-text">{p.sku}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>{p.gemstone_type}</td>
+                <td>
+                  <span class={`badge ${badgeClass}`}>{p.feng_shui_element}</span>
+                </td>
+                <td>
+                  <span class="price-text-highlight">{p.price_text}</span>
+                </td>
+                <td>
+                  <span class={`badge ${p.stock_status === 'in_stock' ? 'badge-stock-in' : 'badge-stock-out'}`}>
+                    {p.stock_status === 'in_stock' ? 'Còn hàng' : 'Hết hàng'}
+                  </span>
+                </td>
+                <td>
+                  <div class="action-buttons">
+                    <a href={`/admin/products/edit?id=${p.id}`} class="btn-icon" title="Chỉnh sửa sản phẩm">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+                      </svg>
+                    </a>
+                    <a href={`/san-pham/${p.slug}`} target="_blank" class="btn-icon" title="Xem trên website showroom">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</AdminLayout>

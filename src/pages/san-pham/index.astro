@@ -1,0 +1,190 @@
+---
+import StoreLayout from '../../layouts/StoreLayout.astro';
+import { getDb } from '../../lib/db';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+const url = new URL(Astro.request.url);
+
+const q = url.searchParams.get('q') || '';
+const category = url.searchParams.get('cat') || '';
+const element = url.searchParams.get('el') || '';
+const page = parseInt(url.searchParams.get('page') || '1', 10);
+const pageSize = 12;
+const offset = (page - 1) * pageSize;
+
+const whereConditions: string[] = [];
+const params: any[] = [];
+
+if (q) {
+  whereConditions.push('(name LIKE ? OR gemstone_type LIKE ? OR short_description LIKE ?)');
+  const term = `%${q}%`;
+  params.push(term, term, term);
+}
+if (category) {
+  whereConditions.push('category_name = ?');
+  params.push(category);
+}
+if (element) {
+  whereConditions.push('feng_shui_element = ?');
+  params.push(element);
+}
+
+const whereSql = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+const totalCount = (await db.prepare(`SELECT COUNT(*) as count FROM products ${whereSql}`).bind(...params).first<{ count: number }>())?.count || 0;
+const totalPages = Math.ceil(totalCount / pageSize) || 1;
+
+const products = (await db.prepare(`
+  SELECT id, slug, name, sku, price, price_text, category_name, gemstone_type, feng_shui_element, target_zodiac, thumbnail
+  FROM products
+  ${whereSql}
+  ORDER BY id ASC
+  LIMIT ? OFFSET ?
+`).bind(...params, pageSize, offset).all<any>()).results || [];
+
+const categories = (await db.prepare('SELECT c.name, COUNT(p.id) as count FROM categories c LEFT JOIN products p ON p.category_name = c.name GROUP BY c.id ORDER BY c.sort_order ASC').all<any>()).results || [];
+---
+
+<StoreLayout title="Sản Phẩm Phong Thủy" activeNav="products">
+  <div class="container" style="padding: 40px 24px;">
+    <!-- BREADCRUMB -->
+    <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 24px;">
+      <a href="/" style="color: var(--text-muted); text-decoration: none;">Trang Chủ</a> / 
+      <span style="color: #fff; font-weight: 600;">Sản Phẩm Phong Thủy</span>
+      {category && <span> / {category}</span>}
+      {element && <span> / Mệnh {element}</span>}
+    </div>
+
+    <div style="display: grid; grid-template-columns: 260px 1fr; gap: 32px; align-items: flex-start;">
+      <!-- SIDEBAR FILTERS -->
+      <aside style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 14px; padding: 24px;">
+        <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 16px;">Bộ Lọc Sản Phẩm</h3>
+
+        <!-- SEARCH -->
+        <form method="GET" action="/san-pham" style="margin-bottom: 24px;">
+          <input 
+            type="text" 
+            name="q" 
+            value={q} 
+            placeholder="Tìm tên đá, linh vật..." 
+            class="form-control" 
+            style="font-size: 13px;"
+          />
+        </form>
+
+        <!-- ELEMENT FILTER -->
+        <div style="margin-bottom: 24px;">
+          <h4 style="font-size: 13px; text-transform: uppercase; color: var(--gold-accent); margin-bottom: 10px; font-weight: 700;">
+            Theo Ngũ Hành Mệnh
+          </h4>
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+            <a href="/san-pham" style={`color: ${!element ? 'var(--gold-accent)' : 'var(--text-muted)'}; text-decoration: none;`}>
+              Tất cả các mệnh
+            </a>
+            {['Kim', 'Mộc', 'Thủy', 'Hỏa', 'Thổ', 'Đa Mệnh'].map((el) => (
+              <a 
+                href={`/san-pham?el=${encodeURIComponent(el)}${category ? `&cat=${encodeURIComponent(category)}` : ''}`}
+                style={`color: ${element === el ? 'var(--gold-accent)' : 'var(--text-muted)'}; text-decoration: none; font-weight: ${element === el ? '700' : 'normal'};`}
+              >
+                Mệnh {el}
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <!-- CATEGORY FILTER -->
+        <div>
+          <h4 style="font-size: 13px; text-transform: uppercase; color: var(--gold-accent); margin-bottom: 10px; font-weight: 700;">
+            Chủng Loại Đá
+          </h4>
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; max-height: 380px; overflow-y: auto;">
+            <a href="/san-pham" style={`color: ${!category ? 'var(--gold-accent)' : 'var(--text-muted)'}; text-decoration: none;`}>
+              Tất cả chủng loại ({totalCount})
+            </a>
+            {categories.map((c) => (
+              <a 
+                href={`/san-pham?cat=${encodeURIComponent(c.name)}${element ? `&el=${encodeURIComponent(element)}` : ''}`}
+                style={`color: ${category === c.name ? 'var(--gold-accent)' : 'var(--text-muted)'}; text-decoration: none; display: flex; justify-content: space-between; font-weight: ${category === c.name ? '700' : 'normal'};`}
+              >
+                <span>{c.name}</span>
+                <span style="color: var(--text-dim);">({c.count})</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </aside>
+
+      <!-- PRODUCTS MAIN LIST -->
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h1 style="font-family: var(--font-heading); font-size: 24px; color: #fff; margin: 0;">
+            {category || (element ? `Đá Quý Hợp Mệnh ${element}` : 'Tất Cả Sản Phẩm Phong Thủy')}
+            <span style="font-size: 15px; color: var(--text-dim); font-weight: normal; margin-left: 8px;">({totalCount} vật phẩm)</span>
+          </h1>
+        </div>
+
+        {products.length === 0 ? (
+          <div style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 14px; padding: 48px 24px; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🔮</div>
+            <h3 style="font-size: 18px; color: #fff; margin-bottom: 8px;">Không tìm thấy vật phẩm phù hợp</h3>
+            <p style="color: var(--text-dim); font-size: 14px; max-width: 480px; margin: 0 auto 24px; line-height: 1.6;">
+              {q ? `Không có kết quả nào chứa từ khóa "${q}". ` : ''}
+              Vui lòng thử lại với tên loại đá, màu sắc hoặc chọn lại cung mệnh phù hợp.
+            </p>
+            <a href="/san-pham" class="btn-primary" style="display: inline-block; padding: 10px 24px;">
+              Xem Toàn Bộ Sản Phẩm
+            </a>
+          </div>
+        ) : (
+          <div class="products-grid" style="margin: 0; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));">
+            {products.map((p) => {
+              const badgeClass = p.feng_shui_element === 'Kim' ? 'badge-kim'
+                : p.feng_shui_element === 'Mộc' ? 'badge-moc'
+                : p.feng_shui_element === 'Thủy' ? 'badge-thuy'
+                : p.feng_shui_element === 'Hỏa' ? 'badge-hoa'
+                : p.feng_shui_element === 'Thổ' ? 'badge-tho' : 'badge-damenh';
+
+              return (
+                <div class="product-card">
+                  <div class="product-card-thumb">
+                    <img src={p.thumbnail || '/placeholder-gem.jpg'} alt={p.name} loading="lazy" />
+                    <span class={`product-element-tag ${badgeClass}`}>Mệnh {p.feng_shui_element}</span>
+                  </div>
+                  <div class="product-card-body">
+                    <span class="product-cat-label">{p.gemstone_type}</span>
+                    <a href={`/san-pham/${p.slug}`} class="product-card-title">{p.name}</a>
+                    <div class="product-price-box">
+                      <span class="price-current">{p.price_text}</span>
+                      <a href={`/san-pham/${p.slug}`} class="btn-detail-link">Xem chi tiết</a>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <!-- PAGINATION -->
+        {totalPages > 1 && (
+          <div style="display: flex; justify-content: center; gap: 10px; margin-top: 40px;">
+            {page > 1 && (
+              <a href={`/san-pham?page=${page - 1}&q=${encodeURIComponent(q)}&cat=${encodeURIComponent(category)}&el=${encodeURIComponent(element)}`} class="btn-secondary">
+                ← Trang trước
+              </a>
+            )}
+            <span style="display: flex; align-items: center; color: var(--text-muted); font-size: 14px; padding: 0 12px;">
+              Trang {page} / {totalPages}
+            </span>
+            {page < totalPages && (
+              <a href={`/san-pham?page=${page + 1}&q=${encodeURIComponent(q)}&cat=${encodeURIComponent(category)}&el=${encodeURIComponent(element)}`} class="btn-primary">
+                Trang sau →
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</StoreLayout>

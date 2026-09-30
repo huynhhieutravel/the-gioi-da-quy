@@ -1,0 +1,549 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb } from '../../../lib/db';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+const url = new URL(Astro.request.url);
+
+const search = url.searchParams.get('q') || '';
+const tab = url.searchParams.get('tab') || 'all'; // all, published, draft
+const sort = url.searchParams.get('sort') || 'id_asc';
+const pageSize = parseInt(url.searchParams.get('page_size') || '15', 10);
+const page = parseInt(url.searchParams.get('page') || '1', 10);
+const offset = (page - 1) * pageSize;
+
+// Count queries for status tabs
+const countAll = (await db.prepare('SELECT COUNT(*) as count FROM posts WHERE is_page = 1').first<{ count: number }>())?.count || 0;
+const countPublished = (await db.prepare("SELECT COUNT(*) as count FROM posts WHERE is_page = 1 AND status = 'published'").first<{ count: number }>())?.count || 0;
+const countDraft = (await db.prepare("SELECT COUNT(*) as count FROM posts WHERE is_page = 1 AND status = 'draft'").first<{ count: number }>())?.count || 0;
+
+let whereClauses = ['is_page = 1'];
+const params: any[] = [];
+
+if (tab === 'published') {
+  whereClauses.push("status = 'published'");
+} else if (tab === 'draft') {
+  whereClauses.push("status = 'draft'");
+}
+
+if (search) {
+  whereClauses.push('(title LIKE ? OR slug LIKE ?)');
+  params.push(`%${search}%`, `%${search}%`);
+}
+
+const whereSql = `WHERE ${whereClauses.join(' AND ')}`;
+
+// Sort
+let orderSql = 'ORDER BY id ASC';
+if (sort === 'date_desc') orderSql = 'ORDER BY updated_at DESC, id DESC';
+if (sort === 'views_desc') orderSql = 'ORDER BY views DESC';
+if (sort === 'title_asc') orderSql = 'ORDER BY title ASC';
+
+// Total matching
+const countSql = `SELECT COUNT(*) as count FROM posts ${whereSql}`;
+const totalCount = (await db.prepare(countSql).bind(...params).first<{ count: number }>())?.count || 0;
+const totalPages = Math.ceil(totalCount / pageSize) || 1;
+
+// Paginated pages
+const pages = (await db.prepare(`
+  SELECT id, slug, title, category, thumbnail, excerpt, status, views, updated_at, seo_title, seo_description
+  FROM posts
+  ${whereSql}
+  ${orderSql}
+  LIMIT ? OFFSET ?
+`).bind(...params, pageSize, offset).all<any>()).results || [];
+---
+
+<AdminLayout title="Quản Lý Trang Tĩnh" activeNav="pages" breadcrumbs={[{ label: 'Trang Tĩnh' }]}>
+  <div class="page-header">
+    <div class="page-title">
+      <h2>Quản Lý Trang Tĩnh Showroom ({countAll})</h2>
+      <p>Quản lý các trang thông tin cốt lõi: Giới thiệu, Chính sách, Điều khoản, Vận chuyển, FAQs & Liên hệ</p>
+    </div>
+    <div class="page-actions">
+      <a href="/admin/pages/new" class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 8v8"></path>
+          <path d="M8 12h8"></path>
+        </svg>
+        <span>Thêm Trang Mới</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- STATUS TABS (FIT Tour / WordPress Style) -->
+  <div class="status-tabs">
+    <a href={`/admin/pages?tab=all&q=${encodeURIComponent(search)}&sort=${encodeURIComponent(sort)}`} class={`status-tab ${tab === 'all' ? 'active' : ''}`}>
+      <span>Tất cả trang tĩnh</span>
+      <span class="tab-badge">{countAll}</span>
+    </a>
+    <a href={`/admin/pages?tab=published&q=${encodeURIComponent(search)}&sort=${encodeURIComponent(sort)}`} class={`status-tab ${tab === 'published' ? 'active' : ''}`}>
+      <span>Đã xuất bản</span>
+      <span class="tab-badge">{countPublished}</span>
+    </a>
+    <a href={`/admin/pages?tab=draft&q=${encodeURIComponent(search)}&sort=${encodeURIComponent(sort)}`} class={`status-tab ${tab === 'draft' ? 'active' : ''}`}>
+      <span>Bản nháp</span>
+      <span class="tab-badge">{countDraft}</span>
+    </a>
+  </div>
+
+  <!-- FILTER & SEARCH BAR -->
+  <div class="admin-card" style="padding: 16px 20px; margin-bottom: 16px;">
+    <form method="GET" action="/admin/pages" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+      <input type="hidden" name="tab" value={tab} />
+
+      <div style="flex: 2; min-width: 240px; position: relative;">
+        <input 
+          type="text" 
+          name="q" 
+          value={search} 
+          placeholder="Tìm trang theo tiêu đề, đường dẫn slug..." 
+          class="form-control"
+          style="padding-left: 36px;"
+        />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text-dim);">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </svg>
+      </div>
+
+      <div style="flex: 1; min-width: 140px;">
+        <select name="sort" class="form-control" onchange="this.form.submit()">
+          <option value="id_asc" selected={sort === 'id_asc'}>Mặc định (ID)</option>
+          <option value="date_desc" selected={sort === 'date_desc'}>Cập nhật mới nhất</option>
+          <option value="views_desc" selected={sort === 'views_desc'}>Lượt xem nhiều</option>
+          <option value="title_asc" selected={sort === 'title_asc'}>Tiêu đề A → Z</option>
+        </select>
+      </div>
+
+      <div style="width: 110px;">
+        <select name="page_size" class="form-control" onchange="this.form.submit()">
+          <option value="15" selected={pageSize === 15}>15 dòng</option>
+          <option value="30" selected={pageSize === 30}>30 dòng</option>
+          <option value="50" selected={pageSize === 50}>50 dòng</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn-primary" style="padding: 10px 16px;">
+        <span>Lọc</span>
+      </button>
+
+      {(search || sort !== 'id_asc' || tab !== 'all') && (
+        <a href="/admin/pages" class="btn-secondary" style="padding: 10px 14px;">
+          <span>Đặt lại</span>
+        </a>
+      )}
+    </form>
+  </div>
+
+  <!-- BULK ACTIONS TOOLBAR -->
+  <div class="bulk-toolbar" id="bulk-toolbar">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <input type="checkbox" id="select-all" style="width: 17px; height: 17px; cursor: pointer;" onchange="toggleSelectAll(this)" />
+      <label for="select-all" style="font-size: 13px; font-weight: 600; color: #334155; cursor: pointer; margin: 0;">
+        Chọn tất cả
+      </label>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: 12px;">
+      <select id="bulk-action-select" class="form-control" style="width: 220px; padding: 6px 12px; font-size: 13px;">
+        <option value="">-- Hành động hàng loạt --</option>
+        <option value="set_published">Xuất bản trang tĩnh</option>
+        <option value="set_draft">Chuyển về Bản nháp</option>
+        <option value="delete_bulk">🗑️ Xóa các trang đã chọn</option>
+      </select>
+
+      <button type="button" class="btn-secondary" style="padding: 7px 14px; font-size: 13px;" onclick="applyBulkAction()">
+        Áp dụng
+      </button>
+    </div>
+
+    <div id="bulk-selected-info" class="bulk-count-tag" style="display: none; margin-left: auto;">
+      <span>Đã chọn: <strong id="selected-count">0</strong> trang</span>
+    </div>
+  </div>
+
+  <!-- PAGES TABLE -->
+  <div class="admin-card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;"></th>
+            <th style="min-width: 280px;">Tiêu Đề Trang</th>
+            <th>Đường Dẫn Công Khai (Slug)</th>
+            <th>Nhóm Nội Dung</th>
+            <th style="text-align: center;">Trạng Thái</th>
+            <th>Lượt Xem</th>
+            <th>Cập Nhật Lần Cuối</th>
+            <th style="text-align: right; width: 140px;">Thao Tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pages.length === 0 ? (
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 48px; color: var(--text-dim);">
+                Không tìm thấy trang tĩnh nào khớp với bộ lọc tìm kiếm.
+              </td>
+            </tr>
+          ) : (
+            pages.map((p, idx) => {
+              const publicUrl = `/${p.slug}`;
+              return (
+                <tr id={`page-row-${p.id}`}>
+                  <!-- Checkbox -->
+                  <td style="text-align: center;">
+                    <input 
+                      type="checkbox" 
+                      class="row-checkbox" 
+                      value={p.id} 
+                      style="width: 16px; height: 16px; cursor: pointer;" 
+                      onchange="updateSelectionCount()"
+                    />
+                  </td>
+
+                  <!-- Title & Hover Actions -->
+                  <td>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(5, 150, 105, 0.12); border: 1px solid rgba(5, 150, 105, 0.3); display: flex; align-items: center; justify-content: center; color: var(--emerald-400); flex-shrink: 0;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                          <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                      </div>
+                      <div>
+                        <a href={`/admin/pages/edit?id=${p.id}`} class="product-title-link" style="font-size: 14px; font-weight: 600;">
+                          {p.title}
+                        </a>
+                        
+                        <!-- Hover Action Bar -->
+                        <div class="row-quick-actions">
+                          <a href={`/admin/pages/edit?id=${p.id}`} class="row-action-link">Chỉnh sửa</a>
+                          <span class="row-action-sep">•</span>
+                          <button type="button" class="row-action-link" onclick={`openQuickView('${p.id}')`}>Xem nhanh</button>
+                          <span class="row-action-sep">•</span>
+                          <a href={publicUrl} target="_blank" class="row-action-link">Xem trên web ↗</a>
+                          <span class="row-action-sep">•</span>
+                          <button type="button" class="row-action-link" onclick={`duplicatePage('${p.id}', '${p.title.replace(/'/g, "\\'")}')`}>Nhân bản</button>
+                          <span class="row-action-sep">•</span>
+                          <button type="button" class="row-action-link danger" onclick={`handleDeletePage('${p.id}', '${p.title.replace(/'/g, "\\'")}')`}>Xóa</button>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Slug -->
+                  <td>
+                    <a href={publicUrl} target="_blank" style="font-family: monospace; font-size: 12px; color: #2563eb; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                      <code>{publicUrl}</code>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 11px; height: 11px;">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" x2="21" y1="14" y2="3"></line>
+                      </svg>
+                    </a>
+                  </td>
+
+                  <!-- Category -->
+                  <td>
+                    <span style="font-size: 12px; color: #475569; background: #f1f5f9; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 6px; font-weight: 500;">
+                      {p.category || 'Trang Tĩnh'}
+                    </span>
+                  </td>
+
+                  <!-- Status -->
+                  <td style="text-align: center;">
+                    <span 
+                      id={`status-badge-${p.id}`}
+                      class={`badge badge-interactive ${p.status === 'published' ? 'badge-stock-in' : 'badge-stock-out'}`}
+                      title="Bấm để chuyển trạng thái Xuất bản / Bản nháp"
+                      onclick={`togglePageStatus('${p.id}', '${p.status}')`}
+                    >
+                      {p.status === 'published' ? 'Đã Xuất Bản' : 'Bản Nháp'}
+                    </span>
+                  </td>
+
+                  <!-- Views -->
+                  <td>
+                    <span style="font-size: 13px; font-weight: 700; color: #f1f5f9;">{p.views || 0}</span>
+                  </td>
+
+                  <!-- Updated Date -->
+                  <td>
+                    <span style="font-size: 12px; color: var(--text-dim); font-family: monospace;">{p.updated_at?.slice(0, 10) || '2026-09-28'}</span>
+                  </td>
+
+                  <!-- Fast Action Buttons -->
+                  <td style="text-align: right;">
+                    <div class="action-buttons" style="justify-content: flex-end;">
+                      <button type="button" class="btn-icon" title="Xem nhanh trang" onclick={`openQuickView('${p.id}')`}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                      </button>
+                      <a href={`/admin/pages/edit?id=${p.id}`} class="btn-icon" title="Chỉnh sửa trang">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+                        </svg>
+                      </a>
+                      <a href={publicUrl} target="_blank" class="btn-icon" title="Xem trên website">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                          <polyline points="15 3 21 3 21 9"></polyline>
+                          <line x1="10" x2="21" y1="14" y2="3"></line>
+                        </svg>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PAGINATION -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-top: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 12px;">
+      <span style="font-size: 13px; color: var(--text-muted);">
+        Hiển thị <strong>{pages.length}</strong> trên tổng số <strong>{totalCount}</strong> trang tĩnh (Trang {page} / {totalPages})
+      </span>
+      {totalPages > 1 && (
+        <div style="display: flex; gap: 6px; align-items: center;">
+          {page > 1 && (
+            <a href={`/admin/pages?page=${page - 1}&tab=${tab}&q=${encodeURIComponent(search)}&sort=${encodeURIComponent(sort)}&page_size=${pageSize}`} class="btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+              ← Trước
+            </a>
+          )}
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((pNum) => (
+            <a 
+              href={`/admin/pages?page=${pNum}&tab=${tab}&q=${encodeURIComponent(search)}&sort=${encodeURIComponent(sort)}&page_size=${pageSize}`} 
+              class={pNum === page ? 'btn-primary' : 'btn-secondary'}
+              style="padding: 6px 12px; font-size: 12px; min-width: 32px; text-align: center;"
+            >
+              {pNum}
+            </a>
+          ))}
+
+          {page < totalPages && (
+            <a href={`/admin/pages?page=${page + 1}&tab=${tab}&q=${encodeURIComponent(search)}&sort=${encodeURIComponent(sort)}&page_size=${pageSize}`} class="btn-primary" style="padding: 6px 12px; font-size: 12px;">
+              Sau →
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- QUICK VIEW MODAL (WordPress / FIT Tour Style) -->
+  <dialog id="page-quick-view" class="quick-view-dialog" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); padding: 0; max-width: 650px;">
+    <div class="quick-view-header" style="background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 20px;">📄</span>
+        <div>
+          <h3 id="qv-page-title" style="font-size: 16px; margin: 0; color: #0f172a; font-weight: 700;">Xem Nhanh Trang Tĩnh</h3>
+          <span id="qv-page-slug" style="font-size: 12px; color: #2563eb; font-family: monospace; font-weight: 600;">...</span>
+        </div>
+      </div>
+      <button type="button" class="btn-icon" style="width: 28px; height: 28px;" onclick="document.getElementById('page-quick-view').close()">✕</button>
+    </div>
+
+    <div class="quick-view-body" style="padding: 24px;">
+      <div style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 16px;">
+        <div style="font-size: 11px; color: #059669; text-transform: uppercase; font-weight: 700;">Google SERP Meta:</div>
+        <div id="qv-page-seo-title" style="font-size: 14px; color: #1d4ed8; font-weight: 600; margin-top: 4px;"></div>
+        <div id="qv-page-seo-desc" style="font-size: 12px; color: #475569; margin-top: 2px;"></div>
+      </div>
+
+      <div>
+        <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 8px;">Nội dung trang tĩnh:</div>
+        <div id="qv-page-content" style="font-size: 13px; color: #334155; line-height: 1.7; max-height: 280px; overflow-y: auto; background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; white-space: pre-wrap; font-family: monospace;"></div>
+      </div>
+    </div>
+
+    <div class="quick-view-footer">
+      <a id="qv-page-web" href="#" target="_blank" class="btn-secondary">Xem Trên Website ↗</a>
+      <a id="qv-page-edit" href="#" class="btn-primary">Chỉnh Sửa Chi Tiết</a>
+    </div>
+  </dialog>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script is:inline>
+    function toggleSelectAll(master) {
+      const cbs = document.querySelectorAll('.row-checkbox');
+      cbs.forEach(cb => cb.checked = master.checked);
+      updateSelectionCount();
+    }
+
+    function updateSelectionCount() {
+      const selected = document.querySelectorAll('.row-checkbox:checked');
+      const count = selected.length;
+      const infoBox = document.getElementById('bulk-selected-info');
+      const countEl = document.getElementById('selected-count');
+
+      if (count > 0) {
+        infoBox.style.display = 'inline-flex';
+        countEl.innerText = count;
+      } else {
+        infoBox.style.display = 'none';
+        document.getElementById('select-all').checked = false;
+      }
+    }
+
+    function getSelectedIds() {
+      return Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.value);
+    }
+
+    // Toggle Page Status
+    async function togglePageStatus(id, currentStatus) {
+      const badge = document.getElementById(`status-badge-${id}`);
+      const newStatus = currentStatus === 'published' ? 'draft' : 'published';
+
+      try {
+        const res = await fetch('/api/admin/pages', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status: newStatus })
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (newStatus === 'published') {
+            badge.className = 'badge badge-interactive badge-stock-in';
+            badge.innerText = 'Đã Xuất Bản';
+          } else {
+            badge.className = 'badge badge-interactive badge-stock-out';
+            badge.innerText = 'Bản Nháp';
+          }
+          badge.setAttribute('onclick', `togglePageStatus('${id}', '${newStatus}')`);
+          window.showToast('Đã đổi trạng thái trang tĩnh!', 'success');
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Không thể đổi trạng thái'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+      }
+    }
+
+    // Duplicate Page
+    async function duplicatePage(id, title) {
+      if (!confirm(`Bạn có muốn nhân bản trang "${title}" không?`)) return;
+
+      try {
+        const res = await fetch('/api/admin/pages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'duplicate', id })
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.showToast(`Đã nhân bản trang "${title}"!`, 'success');
+          setTimeout(() => window.location.reload(), 600);
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Không thể nhân bản'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+      }
+    }
+
+    // Delete Single Page
+    async function handleDeletePage(id, title) {
+      if (!confirm(`Bạn có chắc chắn muốn xóa trang "${title}" không?`)) return;
+
+      try {
+        const res = await fetch(`/api/admin/pages?id=${encodeURIComponent(id)}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.showToast('Xóa trang thành công!', 'success');
+          const row = document.getElementById(`page-row-${id}`);
+          if (row) row.remove();
+          updateSelectionCount();
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Không thể xóa trang'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+      }
+    }
+
+    // Bulk Actions
+    async function applyBulkAction() {
+      const action = document.getElementById('bulk-action-select').value;
+      const ids = getSelectedIds();
+
+      if (!action) {
+        alert('Vui lòng chọn một hành động cần thực hiện');
+        return;
+      }
+      if (ids.length === 0) {
+        alert('Vui lòng tích chọn ít nhất 1 trang tĩnh');
+        return;
+      }
+
+      let payload = { action, ids };
+
+      if (action === 'set_published') {
+        payload.action = 'set_status';
+        payload.value = 'published';
+      } else if (action === 'set_draft') {
+        payload.action = 'set_status';
+        payload.value = 'draft';
+      } else if (action === 'delete_bulk') {
+        if (!confirm(`CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN ${ids.length} trang đã chọn?`)) {
+          return;
+        }
+      }
+
+      try {
+        const res = await fetch('/api/admin/pages', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.showToast(`Thao tác thành công trên ${ids.length} trang!`, 'success');
+          setTimeout(() => window.location.reload(), 600);
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Thao tác hàng loạt thất bại'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+      }
+    }
+
+    // Quick View
+    async function openQuickView(id) {
+      const modal = document.getElementById('page-quick-view');
+      modal.showModal();
+
+      document.getElementById('qv-page-title').innerText = 'Đang tải dữ liệu...';
+      document.getElementById('qv-page-slug').innerText = '';
+
+      try {
+        const res = await fetch(`/api/admin/pages?id=${encodeURIComponent(id)}`);
+        const result = await res.json();
+        if (result.success && result.data) {
+          const p = result.data;
+          document.getElementById('qv-page-title').innerText = p.title;
+          document.getElementById('qv-page-slug').innerText = `/${p.slug}`;
+          document.getElementById('qv-page-seo-title').innerText = p.seo_title || p.title;
+          document.getElementById('qv-page-seo-desc').innerText = p.seo_description || p.excerpt || 'Chưa có mô tả SEO.';
+          document.getElementById('qv-page-content').innerText = p.content || 'Nội dung trang chưa được cập nhật.';
+
+          document.getElementById('qv-page-web').href = `/${p.slug}`;
+          document.getElementById('qv-page-edit').href = `/admin/pages/edit?id=${p.id}`;
+        }
+      } catch (err) {
+        alert('Lỗi tải dữ liệu: ' + err.message);
+      }
+    }
+  </script>
+</AdminLayout>

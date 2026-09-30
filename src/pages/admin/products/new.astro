@@ -1,0 +1,734 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb } from '../../../lib/db';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+
+// Categories list
+const allCategories = (await db.prepare('SELECT id, name FROM categories ORDER BY sort_order ASC').all<{ id: string; name: string }>()).results || [];
+
+// Default SKU
+const count = (await db.prepare('SELECT COUNT(*) as count FROM products').first<{ count: number }>())?.count || 0;
+const defaultSku = `DQ-${String(count + 1).padStart(4, '0')}`;
+
+// Media list for image picker
+const mediaList = (await db.prepare('SELECT id, url, filename FROM media ORDER BY id DESC LIMIT 60').all<any>()).results || [];
+---
+
+<AdminLayout 
+  title="New Product" 
+  activeNav="new-product"
+  hideSidebar={true}
+>
+  <!-- Quill Snow Stylesheet Local -->
+  <link href="/libs/quill.snow.css" rel="stylesheet" />
+
+  <div class="fittour-editor-scope">
+    <div id="alertBox" style="display: none; background: #fee2e2; color: #991b1b; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; border: 1px solid #fecaca;"></div>
+
+    <form id="productForm" onsubmit="event.preventDefault(); saveProduct('publish');">
+      <!-- TOP BAR -->
+      <div class="edit-topbar">
+        <div class="topbar-breadcrumb">
+          <span class="emoji">🧑‍💻</span>
+          <span class="sep">/</span>
+          <a href="/admin/products">Products</a>
+          <span class="sep">/</span>
+          <span class="current">New Product</span>
+        </div>
+
+        <div class="topbar-actions">
+          <button type="button" class="btn-undo-redo" id="btnUndo" title="Hoàn tác (Ctrl+Z)">↩</button>
+          <button type="button" class="btn-undo-redo" id="btnRedo" title="Làm lại (Ctrl+Y)">↪</button>
+          <button type="button" class="btn-top-action" id="btnPreview">Preview</button>
+          <button type="button" class="btn-top-action" onclick="saveProduct('draft')">Save Draft</button>
+          <button type="button" class="btn-top-publish" onclick="saveProduct('publish')">Publish ▾</button>
+        </div>
+      </div>
+
+      <!-- MAIN TWO-COLUMN GRID -->
+      <div class="edit-grid">
+        <!-- LEFT COLUMN: CANVAS CARD -->
+        <div class="editor-card">
+          <!-- TITLE INPUT (BORDERLESS, NO LABEL) -->
+          <input 
+            type="text" 
+            id="titleInput" 
+            name="name" 
+            class="editor-title" 
+            placeholder="Untitled product..." 
+            autocomplete="off"
+            oninput="handleTitleChange(this.value)"
+          />
+
+          <!-- MODE SWITCHER -->
+          <div class="mode-switcher-wrap">
+            <button type="button" id="btnModeVisual" class="mode-switcher-btn active" onclick="switchMode('visual')">
+              ✍️ Tiptap Editor
+            </button>
+            <button type="button" id="btnModeCode" class="mode-switcher-btn" onclick="switchMode('code')">
+              ⬛ Raw HTML Code
+            </button>
+          </div>
+
+          <!-- BLOCK HINT -->
+          <div class="block-hint">
+            ✏️ Type / to choose a block
+          </div>
+
+          <!-- VISUAL QUILL EDITOR -->
+          <div id="visualEditorWrapper">
+            <div id="quillEditor"></div>
+            <input type="hidden" name="content" id="hiddenContent" />
+          </div>
+
+          <!-- RAW CODE EDITOR -->
+          <div id="codeEditorWrapper" style="display: none;">
+            <textarea 
+              id="rawContentTextarea" 
+              class="raw-html-editor"
+              placeholder="Bắt đầu viết mô tả sản phẩm phong thủy..."
+              oninput="syncFromRaw()"
+            ></textarea>
+          </div>
+
+          <!-- SPECIFICATIONS & PRICING -->
+          <div class="product-specs-box">
+            <div class="product-specs-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+              <span>Thông Số Kỹ Thuật & Giá Bán</span>
+            </div>
+
+            <!-- ROW 1: PRICING & SKU -->
+            <div class="spec-grid-3">
+              <div class="spec-input-group">
+                <label class="spec-input-label">Giá Bán (VNĐ)</label>
+                <input type="number" id="priceInput" name="price" class="spec-input-field" placeholder="VD: 2500000" />
+              </div>
+              <div class="spec-input-group">
+                <label class="spec-input-label">Giá Gốc / Niêm Yết (VNĐ)</label>
+                <input type="number" id="originalPriceInput" name="original_price" class="spec-input-field" placeholder="VD: 2900000" />
+              </div>
+              <div class="spec-input-group">
+                <label class="spec-input-label">Mã SKU</label>
+                <input type="text" id="skuInput" name="sku" class="spec-input-field" value={defaultSku} />
+              </div>
+            </div>
+
+            <!-- ROW 2: GEMSTONE DETAILS -->
+            <div class="spec-grid-3">
+              <div class="spec-input-group">
+                <label class="spec-input-label">Chủng Loại Đá Quý</label>
+                <input type="text" id="gemstoneTypeInput" name="gemstone_type" class="spec-input-field" placeholder="VD: Thạch Anh Tím Thiên Nhiên" />
+              </div>
+              <div class="spec-input-group">
+                <label class="spec-input-label">Kích Thước</label>
+                <input type="text" id="dimensionsInput" name="dimensions" class="spec-input-field" placeholder="VD: 45 x 30 x 12 mm" />
+              </div>
+              <div class="spec-input-group">
+                <label class="spec-input-label">Trọng Lượng (Weight)</label>
+                <input type="text" id="weightInput" name="weight" class="spec-input-field" placeholder="VD: 38.5 gram" />
+              </div>
+            </div>
+
+            <!-- ROW 3: CERTIFICATION & TARGET ZODIAC -->
+            <div class="spec-grid-2">
+              <div class="spec-input-group">
+                <label class="spec-input-label">Chứng Thư Giám Định</label>
+                <input type="text" id="certificationInput" name="certification" class="spec-input-field" placeholder="VD: Giám định PNJ Lab / SJC" />
+              </div>
+              <div class="spec-input-group">
+                <label class="spec-input-label">Cung Mạng / Tuổi Hợp</label>
+                <input type="text" id="targetZodiacInput" name="target_zodiac" class="spec-input-field" placeholder="VD: Hợp Mệnh Hỏa, Mệnh Thổ" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: PANEL CARD -->
+        <div class="panel-card">
+          <!-- 1. SEO ADVANCED BUTTON -->
+          <button type="button" id="btnOpenSeoModal" class="btn-seo-advanced" onclick="openSeoModal()">
+            <span class="seo-btn-left">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <span>Tùy chỉnh SEO nâng cao</span>
+            </span>
+            <span class="seo-word-badge" id="sidebarWordCount">0 từ</span>
+          </button>
+
+          <!-- 2. FEATURED IMAGE -->
+          <div class="sidebar-section">
+            <label class="sidebar-label">Featured Image</label>
+            <div id="fimgUploadBox" class="fimg-upload-box" onclick="openMediaModal('thumbnail')">
+              <div id="fimgPlaceholder">
+                + Upload Image
+              </div>
+              <img id="fimgPreview" src="" alt="Featured preview" style="display: none; width: 100%; border-radius: 6px; aspect-ratio: 1; object-fit: cover;" />
+            </div>
+            <input type="hidden" id="thumbnailInput" name="thumbnail" value="" />
+            <div id="fimgActions" class="fimg-actions" style="display: none;">
+              <button type="button" class="btn-fimg-change" onclick="openMediaModal('thumbnail')">Đổi ảnh</button>
+              <button type="button" class="btn-fimg-remove" onclick="removeThumbnail()">Xóa</button>
+            </div>
+          </div>
+
+          <!-- 3. PRODUCT GALLERY -->
+          <div class="sidebar-section">
+            <div class="sidebar-label-row">
+              <label class="sidebar-label">Thư Viện Ảnh (Gallery)</label>
+              <span class="sidebar-badge-count" id="galleryCountBadge">0 ảnh</span>
+            </div>
+            <div class="gallery-thumbs-grid" id="galleryThumbsGrid"></div>
+            <button type="button" class="btn-add-gallery" onclick="openMediaModal('gallery')">+ Thêm ảnh thư viện</button>
+            <input type="hidden" id="hiddenImages" name="images" value="" />
+          </div>
+
+          <!-- 4. STATUS -->
+          <div class="sidebar-section">
+            <label class="sidebar-label">Status</label>
+            <select name="stock_status" id="statusSelect" class="sidebar-select">
+              <option value="in_stock" selected>Còn hàng (In Stock)</option>
+              <option value="out_of_stock">Hết hàng (Out of Stock)</option>
+              <option value="draft">Bản nháp (Draft)</option>
+            </select>
+          </div>
+
+          <!-- 5. MỆNH PHONG THỦY -->
+          <div class="sidebar-section">
+            <label class="sidebar-label-caps">MỆNH PHONG THỦY</label>
+            <select name="feng_shui_element" id="elementSelect" class="sidebar-select">
+              <option value="Kim">Mệnh Kim</option>
+              <option value="Mộc">Mệnh Mộc</option>
+              <option value="Thủy">Mệnh Thủy</option>
+              <option value="Hỏa">Mệnh Hỏa</option>
+              <option value="Thổ" selected>Mệnh Thổ</option>
+              <option value="Tất cả mệnh">Tất cả các mệnh</option>
+            </select>
+          </div>
+
+          <!-- 6. CATEGORIES -->
+          <div class="sidebar-section">
+            <label class="sidebar-label">Categories</label>
+            <div class="categories-list">
+              {allCategories.map((cat, idx) => (
+                <label class="cat-checkbox-item">
+                  <input type="checkbox" name="category" value={cat.name} checked={idx === 0} />
+                  <span>{cat.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <!-- 7. TAGS -->
+          <div class="sidebar-section">
+            <div class="sidebar-label-row">
+              <label class="sidebar-label">Thẻ (Tags)</label>
+              <span class="sidebar-badge-count" id="tagsCountBadge">0 thẻ</span>
+            </div>
+            
+            <div class="tags-pills-wrap" id="tagsPillsWrap"></div>
+
+            <div class="tag-input-row">
+              <input 
+                type="text" 
+                id="tagInput" 
+                class="sidebar-input" 
+                placeholder="Nhập thẻ rồi nhấn Enter..." 
+                onkeydown="if(event.key==='Enter'){event.preventDefault();addTagFromInput();}"
+              />
+              <button type="button" class="btn-sidebar-add" onclick="addTagFromInput()">+ Thêm</button>
+            </div>
+
+            <div class="tag-suggestions">
+              <span style="font-size: 11px; color: #94a3b8; align-self: center;">Gợi ý:</span>
+              <button type="button" class="tag-suggest-btn" onclick="addTag('Phong Thủy')">+ Phong Thủy</button>
+              <button type="button" class="tag-suggest-btn" onclick="addTag('Đá Quý')">+ Đá Quý</button>
+              <button type="button" class="tag-suggest-btn" onclick="addTag('Tài Lộc')">+ Tài Lộc</button>
+              <button type="button" class="tag-suggest-btn" onclick="addTag('Thạch Anh')">+ Thạch Anh</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HIDDEN FORM FIELDS -->
+      <input type="hidden" name="slug" id="hiddenSlug" value="" />
+      <input type="hidden" name="short_description" id="hiddenShortDesc" value="" />
+      <input type="hidden" name="seo_title" id="hiddenSeoTitle" value="" />
+      <input type="hidden" name="seo_description" id="hiddenSeoDescription" value="" />
+      <input type="hidden" name="focus_keyword" id="hiddenFocusKeyword" value="" />
+      <input type="hidden" name="tags" id="hiddenTags" value="" />
+
+      <!-- SEO MODAL -->
+      <div id="seoModalOverlay" class="seo-modal-overlay">
+        <div class="seo-modal-content">
+          <div class="seo-modal-head">
+            <h3>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <span>Tùy chỉnh SEO nâng cao</span>
+            </h3>
+            <button type="button" class="seo-close-btn" onclick="closeSeoModal()">✕</button>
+          </div>
+
+          <!-- Google SERP Snippet Preview -->
+          <div class="google-snippet-box">
+            <div class="google-snippet-url" id="serpPreviewUrl">
+              thegioidaquy.net › san-pham › untitled-product
+            </div>
+            <div class="google-snippet-title" id="serpPreviewTitle">
+              Untitled product...
+            </div>
+            <div class="google-snippet-desc" id="serpPreviewDesc">
+              Bắt đầu viết mô tả sản phẩm để tự động cập nhật đoạn trích mô tả xuất hiện trên kết quả tìm kiếm Google...
+            </div>
+          </div>
+
+          <!-- SEO Title Input -->
+          <div class="seo-input-group">
+            <div class="seo-input-label-row">
+              <label class="seo-input-label">Tiêu đề SEO (Title Tag)</label>
+              <span class="seo-counter" id="seoTitleCounter">0 / 60</span>
+            </div>
+            <input 
+              type="text" 
+              id="seoTitleInput" 
+              class="seo-text-input" 
+              placeholder="Nhập tiêu đề chuẩn SEO Google..." 
+              oninput="updateSeoTitle(this.value)"
+            />
+            <div class="seo-meter-track">
+              <div id="seoTitleProgress" class="seo-meter-fill"></div>
+            </div>
+          </div>
+
+          <!-- Slug / Permalink Input -->
+          <div class="seo-input-group">
+            <div class="seo-input-label-row">
+              <label class="seo-input-label">Đường dẫn tĩnh (Slug / Permalink)</label>
+            </div>
+            <input 
+              type="text" 
+              id="seoSlugInput" 
+              class="seo-text-input" 
+              placeholder="duong-dan-san-pham" 
+              oninput="updateSeoSlug(this.value)"
+            />
+          </div>
+
+          <!-- SEO Description Input -->
+          <div class="seo-input-group">
+            <div class="seo-input-label-row">
+              <label class="seo-input-label">Mô tả SEO (Meta Description)</label>
+              <span class="seo-counter" id="seoDescCounter">0 / 160</span>
+            </div>
+            <textarea 
+              id="seoDescInput" 
+              class="seo-text-input" 
+              rows="3" 
+              placeholder="Đoạn trích tóm tắt này sẽ xuất hiện trên kết quả tìm kiếm Google..." 
+              oninput="updateSeoDesc(this.value)"
+            ></textarea>
+            <div class="seo-meter-track">
+              <div id="seoDescProgress" class="seo-meter-fill"></div>
+            </div>
+          </div>
+
+          <!-- Focus Keyword -->
+          <div class="seo-input-group">
+            <div class="seo-input-label-row">
+              <label class="seo-input-label">Từ khóa chính (Focus Keyword)</label>
+            </div>
+            <input 
+              type="text" 
+              id="seoKeywordInput" 
+              class="seo-text-input" 
+              placeholder="VD: vòng tay thạch anh tím phong thủy" 
+              oninput="document.getElementById('hiddenFocusKeyword').value = this.value"
+            />
+          </div>
+
+          <div class="seo-modal-foot">
+            <button type="button" class="btn-seo-done" onclick="closeSeoModal()">Hoàn tất</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEDIA MODAL -->
+      <div id="mediaModalOverlay" class="media-modal-overlay">
+        <div class="media-modal-content">
+          <div class="media-modal-head">
+            <h3>Chọn ảnh từ Thư Viện Media</h3>
+            <button type="button" class="seo-close-btn" onclick="closeMediaModal()">✕</button>
+          </div>
+          <div class="media-grid-scroll">
+            {mediaList.map((m: any) => (
+              <div class="media-pick-item" onclick={`selectMedia('${m.url}')`}>
+                <img src={m.url} alt={m.filename || 'Media file'} loading="lazy" />
+              </div>
+            ))}
+          </div>
+          <div class="media-modal-foot">
+            <span style="font-size: 13px; color: #64748b;">Chọn 1 hình ảnh hoặc click ra ngoài để đóng</span>
+            <button type="button" class="btn-seo-done" onclick="closeMediaModal()">Đóng</button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- QUILL JS LOCAL SCRIPT -->
+  <script is:inline src="/libs/quill.min.js"></script>
+
+  <script is:inline>
+    var quill;
+    var currentTarget = 'thumbnail';
+    var currentGallery = [];
+    var currentTags = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize Quill
+      quill = new Quill('#quillEditor', {
+        theme: 'snow',
+        placeholder: 'Bắt đầu viết mô tả sản phẩm phong thủy...',
+        modules: {
+          toolbar: [
+            [{ 'header': [1, 2, 3, 4, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            ['blockquote', 'code-block'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            [{ 'align': [] }],
+            ['link', 'image'],
+            ['clean']
+          ]
+        }
+      });
+
+      // Undo / Redo
+      document.getElementById('btnUndo').addEventListener('click', function() {
+        if (quill && quill.history) quill.history.undo();
+      });
+      document.getElementById('btnRedo').addEventListener('click', function() {
+        if (quill && quill.history) quill.history.redo();
+      });
+
+      // Quill Text Change
+      quill.on('text-change', function() {
+        var text = quill.getText().trim();
+        var words = text.length > 0 ? text.split(/\s+/).length : 0;
+        document.getElementById('sidebarWordCount').innerText = words + ' từ';
+
+        document.getElementById('hiddenContent').value = quill.root.innerHTML;
+
+        var hiddenShortDesc = document.getElementById('hiddenShortDesc');
+        if (!hiddenShortDesc.value && text.length > 0) {
+          var cleanExcerpt = text.slice(0, 150).replace(/\n/g, ' ');
+          document.getElementById('serpPreviewDesc').innerText = cleanExcerpt;
+        }
+      });
+
+      // Preview button
+      document.getElementById('btnPreview').addEventListener('click', function() {
+        var title = document.getElementById('titleInput').value || 'Untitled product';
+        var content = quill ? quill.root.innerHTML : '';
+        var win = window.open('', '_blank');
+        win.document.write('<html><head><title>' + title + ' (Xem trước)</title><link rel="stylesheet" href="/libs/quill.snow.css"><style>body{max-width:800px;margin:40px auto;font-family:sans-serif;line-height:1.8;padding:0 20px;}h1{font-size:32px;font-weight:700;margin-bottom:24px;}</style></head><body><h1>' + title + '</h1><div>' + content + '</div></body></html>');
+      });
+    });
+
+    // Handle Title Change
+    function handleTitleChange(val) {
+      var title = val.trim();
+      var slug = title
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'D')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+      document.getElementById('hiddenSlug').value = slug;
+      document.getElementById('seoSlugInput').value = slug;
+      document.getElementById('serpPreviewUrl').innerText = 'thegioidaquy.net › san-pham › ' + (slug || 'untitled-product');
+
+      if (!document.getElementById('seoTitleInput').value) {
+        document.getElementById('serpPreviewTitle').innerText = title || 'Untitled product...';
+      }
+    }
+
+    // Switch between Tiptap Editor & Raw HTML Code
+    function switchMode(mode) {
+      var btnVisual = document.getElementById('btnModeVisual');
+      var btnCode = document.getElementById('btnModeCode');
+      var wrapVisual = document.getElementById('visualEditorWrapper');
+      var wrapCode = document.getElementById('codeEditorWrapper');
+      var rawText = document.getElementById('rawContentTextarea');
+
+      if (mode === 'visual') {
+        btnVisual.classList.add('active');
+        btnCode.classList.remove('active');
+        wrapVisual.style.display = 'block';
+        wrapCode.style.display = 'none';
+
+        if (quill) {
+          quill.root.innerHTML = rawText.value;
+          document.getElementById('hiddenContent').value = rawText.value;
+        }
+      } else {
+        btnCode.classList.add('active');
+        btnVisual.classList.remove('active');
+        wrapCode.style.display = 'block';
+        wrapVisual.style.display = 'none';
+
+        if (quill) {
+          rawText.value = quill.root.innerHTML;
+          document.getElementById('hiddenContent').value = rawText.value;
+        }
+      }
+    }
+
+    // Sync from Raw HTML Textarea
+    function syncFromRaw() {
+      var rawText = document.getElementById('rawContentTextarea').value;
+      document.getElementById('hiddenContent').value = rawText;
+      var cleanText = rawText.replace(/<[^>]*>/g, '').trim();
+      var words = cleanText.length > 0 ? cleanText.split(/\s+/).length : 0;
+      document.getElementById('sidebarWordCount').innerText = words + ' từ';
+    }
+
+    // Save Product (via API)
+    async function saveProduct(action) {
+      var titleInput = document.getElementById('titleInput');
+      var name = (titleInput.value || '').trim();
+      if (!name) {
+        alert('Vui lòng nhập tên sản phẩm phong thủy');
+        titleInput.focus();
+        return;
+      }
+
+      var isCode = document.getElementById('codeEditorWrapper').style.display === 'block';
+      var content = isCode ? document.getElementById('rawContentTextarea').value : (quill ? quill.root.innerHTML : '');
+
+      var checkedCats = [];
+      document.querySelectorAll('input[name="category"]:checked').forEach(function(el) {
+        checkedCats.push(el.value);
+      });
+
+      var status = action === 'draft' ? 'draft' : document.getElementById('statusSelect').value;
+
+      var payload = {
+        name: name,
+        slug: document.getElementById('hiddenSlug').value || document.getElementById('seoSlugInput').value,
+        price: document.getElementById('priceInput').value || 0,
+        original_price: document.getElementById('originalPriceInput').value || 0,
+        sku: document.getElementById('skuInput').value,
+        gemstone_type: document.getElementById('gemstoneTypeInput').value,
+        dimensions: document.getElementById('dimensionsInput').value,
+        weight: document.getElementById('weightInput').value,
+        certification: document.getElementById('certificationInput').value,
+        target_zodiac: document.getElementById('targetZodiacInput').value,
+        feng_shui_element: document.getElementById('elementSelect').value,
+        category_name: checkedCats.length > 0 ? checkedCats[0] : 'Đá phong thủy',
+        thumbnail: document.getElementById('thumbnailInput').value,
+        images: JSON.stringify(currentGallery),
+        tags: currentTags.join(', '),
+        stock_status: status,
+        short_description: document.getElementById('hiddenShortDesc').value || (quill ? quill.getText().slice(0, 160) : ''),
+        content: content,
+        seo_title: document.getElementById('hiddenSeoTitle').value || name,
+        seo_description: document.getElementById('hiddenSeoDescription').value || '',
+        focus_keyword: document.getElementById('hiddenFocusKeyword').value || ''
+      };
+
+      try {
+        var res = await fetch('/api/admin/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        var data = await res.json();
+        if (data.success) {
+          window.location.href = '/admin/products?created=1';
+        } else {
+          var alertBox = document.getElementById('alertBox');
+          alertBox.innerText = '❌ Lỗi: ' + (data.error ? data.error.message : 'Không thể lưu sản phẩm');
+          alertBox.style.display = 'block';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      } catch (err) {
+        alert('Lỗi kết nối máy chủ: ' + err.message);
+      }
+    }
+
+    // SEO Modal Controls
+    function openSeoModal() {
+      document.getElementById('seoModalOverlay').style.display = 'flex';
+      var titleVal = document.getElementById('titleInput').value.trim();
+      if (!document.getElementById('seoTitleInput').value && titleVal) {
+        document.getElementById('seoTitleInput').value = titleVal;
+        updateSeoTitle(titleVal);
+      }
+      if (!document.getElementById('seoSlugInput').value) {
+        var slugVal = document.getElementById('hiddenSlug').value;
+        document.getElementById('seoSlugInput').value = slugVal;
+      }
+    }
+
+    function closeSeoModal() {
+      document.getElementById('seoModalOverlay').style.display = 'none';
+    }
+
+    function updateSeoTitle(val) {
+      var len = val.length;
+      document.getElementById('seoTitleCounter').innerText = len + ' / 60';
+      document.getElementById('hiddenSeoTitle').value = val;
+      document.getElementById('serpPreviewTitle').innerText = val || document.getElementById('titleInput').value || 'Untitled product...';
+
+      var pct = Math.min(100, Math.round((len / 60) * 100));
+      var bar = document.getElementById('seoTitleProgress');
+      bar.style.width = pct + '%';
+      bar.className = 'seo-meter-fill' + (len > 60 ? ' danger' : (len >= 40 ? ' good' : ' warning'));
+    }
+
+    function updateSeoSlug(val) {
+      var slug = val.toLowerCase().replace(/[^a-z0-9\-]/g, '');
+      document.getElementById('hiddenSlug').value = slug;
+      document.getElementById('serpPreviewUrl').innerText = 'thegioidaquy.net › san-pham › ' + (slug || 'untitled-product');
+    }
+
+    function updateSeoDesc(val) {
+      var len = val.length;
+      document.getElementById('seoDescCounter').innerText = len + ' / 160';
+      document.getElementById('hiddenSeoDescription').value = val;
+      document.getElementById('hiddenShortDesc').value = val;
+      document.getElementById('serpPreviewDesc').innerText = val || 'Bắt đầu viết mô tả sản phẩm để tự động cập nhật đoạn trích mô tả xuất hiện trên kết quả tìm kiếm Google...';
+
+      var pct = Math.min(100, Math.round((len / 160) * 100));
+      var bar = document.getElementById('seoDescProgress');
+      bar.style.width = pct + '%';
+      bar.className = 'seo-meter-fill' + (len > 160 ? ' danger' : (len >= 100 ? ' good' : ' warning'));
+    }
+
+    // Media Modal Controls
+    function openMediaModal(target) {
+      currentTarget = target || 'thumbnail';
+      document.getElementById('mediaModalOverlay').style.display = 'flex';
+    }
+
+    function closeMediaModal() {
+      document.getElementById('mediaModalOverlay').style.display = 'none';
+    }
+
+    function selectMedia(url) {
+      if (currentTarget === 'thumbnail') {
+        document.getElementById('thumbnailInput').value = url;
+        document.getElementById('fimgPreview').src = url;
+        document.getElementById('fimgPreview').style.display = 'block';
+        document.getElementById('fimgPlaceholder').style.display = 'none';
+        document.getElementById('fimgActions').style.display = 'flex';
+      } else if (currentTarget === 'gallery') {
+        if (!currentGallery.includes(url)) {
+          currentGallery.push(url);
+          renderGallery();
+        }
+      } else if (quill) {
+        var range = quill.getSelection(true);
+        quill.insertEmbed(range.index, 'image', url);
+      }
+      closeMediaModal();
+    }
+
+    function removeThumbnail() {
+      document.getElementById('thumbnailInput').value = '';
+      document.getElementById('fimgPreview').src = '';
+      document.getElementById('fimgPreview').style.display = 'none';
+      document.getElementById('fimgPlaceholder').style.display = 'block';
+      document.getElementById('fimgActions').style.display = 'none';
+    }
+
+    // Gallery Render
+    function renderGallery() {
+      var grid = document.getElementById('galleryThumbsGrid');
+      var badge = document.getElementById('galleryCountBadge');
+      var hidden = document.getElementById('hiddenImages');
+      if (!grid) return;
+
+      grid.innerHTML = '';
+      currentGallery.forEach(function(url, idx) {
+        var item = document.createElement('div');
+        item.className = 'gallery-thumb-item';
+        item.innerHTML = '<img src="' + url + '" alt="Gallery ' + idx + '" /><button type="button" class="gallery-thumb-remove" onclick="removeGalleryImage(' + idx + ')">&times;</button>';
+        grid.appendChild(item);
+      });
+
+      if (badge) badge.innerText = currentGallery.length + ' ảnh';
+      if (hidden) hidden.value = JSON.stringify(currentGallery);
+    }
+
+    function removeGalleryImage(idx) {
+      currentGallery.splice(idx, 1);
+      renderGallery();
+    }
+
+    // Tags Management
+    function escapeHtml(str) {
+      return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function escapeJsString(str) {
+      return (str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
+
+    function renderTags() {
+      var wrap = document.getElementById('tagsPillsWrap');
+      var badge = document.getElementById('tagsCountBadge');
+      var hidden = document.getElementById('hiddenTags');
+      if (!wrap) return;
+
+      wrap.innerHTML = '';
+      currentTags.forEach(function(tag) {
+        var pill = document.createElement('span');
+        pill.className = 'tag-pill-item';
+        pill.innerHTML = '<span>' + escapeHtml(tag) + '</span><button type="button" class="btn-tag-remove" onclick="removeTag(\'' + escapeJsString(tag) + '\')">&times;</button>';
+        wrap.appendChild(pill);
+      });
+
+      if (badge) badge.innerText = currentTags.length + ' thẻ';
+      if (hidden) hidden.value = currentTags.join(', ');
+    }
+
+    function addTag(tag) {
+      var clean = (tag || '').trim();
+      if (!clean) return;
+      if (!currentTags.includes(clean)) {
+        currentTags.push(clean);
+        renderTags();
+      }
+    }
+
+    function removeTag(tag) {
+      currentTags = currentTags.filter(function(t) { return t !== tag; });
+      renderTags();
+    }
+
+    function addTagFromInput() {
+      var input = document.getElementById('tagInput');
+      if (!input) return;
+      var val = input.value.trim();
+      if (val) {
+        var parts = val.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+        parts.forEach(function(p) { addTag(p); });
+        input.value = '';
+      }
+    }
+  </script>
+</AdminLayout>

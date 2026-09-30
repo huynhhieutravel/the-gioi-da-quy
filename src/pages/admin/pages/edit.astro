@@ -1,0 +1,710 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb } from '../../../lib/db';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+const url = new URL(Astro.request.url);
+const id = url.searchParams.get('id');
+const isSaved = url.searchParams.get('saved') === '1';
+
+if (!id) {
+  return Astro.redirect('/admin/pages');
+}
+
+let errorMessage = '';
+
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const action = (formData.get('action') as string) || 'publish';
+    const title = (formData.get('title') as string || '').trim() || 'Untitled page...';
+    let slug = (formData.get('slug') as string || '').trim();
+    if (!slug) {
+      slug = title
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'D')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    }
+    const excerpt = (formData.get('excerpt') as string) || '';
+    const content = (formData.get('content') as string) || '';
+    const css_content = (formData.get('css_content') as string) || '';
+    const status = action === 'draft' ? 'draft' : ((formData.get('status') as string) || 'published');
+    const thumbnail = (formData.get('thumbnail') as string) || '';
+    const category = (formData.get('category') as string) || 'Giới Thiệu';
+    const tags = (formData.get('tags') as string) || '';
+    const seo_title = (formData.get('seo_title') as string) || title;
+    const seo_description = (formData.get('seo_description') as string) || excerpt;
+    const custom_schema = (formData.get('custom_schema') as string) || '';
+
+    await db.prepare(`
+      UPDATE posts SET 
+        title = ?, slug = ?, category = ?, tags = ?, thumbnail = ?, excerpt = ?, content = ?, status = ?,
+        seo_title = ?, seo_description = ?, css_content = ?, custom_schema = ?, updated_at = datetime('now')
+      WHERE id = ? AND is_page = 1
+    `).bind(
+      title, slug, category, tags, thumbnail, excerpt, content, status,
+      seo_title, seo_description, css_content, custom_schema,
+      id
+    ).run();
+
+    return Astro.redirect(`/admin/pages/edit?id=${id}&saved=1`);
+  } catch (err: any) {
+    errorMessage = 'Lỗi cập nhật trang: ' + err.message;
+  }
+}
+
+const page = await db.prepare('SELECT * FROM posts WHERE id = ? AND is_page = 1').bind(id).first<any>();
+if (!page) {
+  return Astro.redirect('/admin/pages');
+}
+
+const mediaList = (await db.prepare('SELECT id, url, filename FROM media ORDER BY id DESC LIMIT 60').all<any>()).results || [];
+const pageGroups = [
+  'Giới Thiệu',
+  'Quy Định & Thỏa Thuận',
+  'Hướng Dẫn Mua Hàng',
+  'Hỗ Trợ Khách Hàng',
+  'Hỏi Đáp',
+  'Liên Hệ',
+  'Dịch Vụ Khác'
+];
+---
+
+<AdminLayout 
+  title={`Edit Page: ${page.title}`} 
+  activeNav="pages"
+  hideSidebar={true}
+>
+  <!-- Quill Snow Stylesheet Local -->
+  <link href="/libs/quill.snow.css" rel="stylesheet" />
+
+  <div class="fittour-editor-scope">
+    {isSaved && (
+      <div style="background: #dcfce7; color: #166534; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; border: 1px solid #bbf7d0; display: flex; align-items: center; justify-content: space-between;">
+        <span>✅ Đã lưu cập nhật trang thành công!</span>
+        <a href={`/${page.slug}`} target="_blank" style="color: #15803d; text-decoration: underline; font-size: 13px;">
+          Xem trang trên web ↗
+        </a>
+      </div>
+    )}
+
+    {errorMessage && (
+      <div style="background: #fee2e2; color: #991b1b; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; border: 1px solid #fecaca;">
+        ❌ {errorMessage}
+      </div>
+    )}
+
+    <form id="pageForm" method="POST" action={`/admin/pages/edit?id=${id}`}>
+      <!-- TOP BAR -->
+      <div class="edit-topbar">
+        <div class="topbar-breadcrumb">
+          <span class="emoji">🧑‍💻</span>
+          <span class="sep">/</span>
+          <a href="/admin/pages">Pages</a>
+          <span class="sep">/</span>
+          <span class="current">Edit Page</span>
+        </div>
+
+        <div class="topbar-actions">
+          <button type="button" class="btn-undo-redo" id="btnUndo" title="Hoàn tác (Ctrl+Z)">↩</button>
+          <button type="button" class="btn-undo-redo" id="btnRedo" title="Làm lại (Ctrl+Y)">↪</button>
+          <button type="button" class="btn-top-action" id="btnPreview">Preview</button>
+          <button type="button" class="btn-top-action" onclick="savePage('draft')">Save Draft</button>
+          <button type="button" class="btn-top-publish" onclick="savePage('publish')">Publish ▾</button>
+        </div>
+      </div>
+
+      <!-- MAIN TWO-COLUMN GRID -->
+      <div class="edit-grid">
+        <!-- LEFT COLUMN: CANVAS CARD -->
+        <div class="editor-card">
+          <!-- TITLE INPUT (BORDERLESS, NO LABEL) -->
+          <input 
+            type="text" 
+            id="titleInput" 
+            name="title" 
+            class="editor-title" 
+            placeholder="Untitled page..." 
+            value={page.title}
+            autocomplete="off"
+            oninput="handleTitleChange(this.value)"
+          />
+
+          <!-- MODE SWITCHER -->
+          <div class="mode-switcher-wrap">
+            <button type="button" id="btnModeVisual" class="mode-switcher-btn active" onclick="switchMode('visual')">
+              ✍️ Tiptap Editor
+            </button>
+            <button type="button" id="btnModeCode" class="mode-switcher-btn" onclick="switchMode('code')">
+              ⬛ Raw HTML Code
+            </button>
+          </div>
+
+          <!-- BLOCK HINT -->
+          <div class="block-hint">
+            ✏️ Type / to choose a block
+          </div>
+
+          <!-- VISUAL QUILL EDITOR -->
+          <div id="visualEditorWrapper">
+            <div id="quillEditor"></div>
+            <input type="hidden" name="content" id="hiddenContent" value={page.content || ''} />
+          </div>
+
+          <!-- RAW CODE EDITOR -->
+          <div id="codeEditorWrapper" style="display: none;">
+            <textarea 
+              id="rawContentTextarea" 
+              class="raw-html-editor"
+              placeholder="Bắt đầu viết nội dung trang..."
+              oninput="syncFromRaw()"
+            >{page.content || ''}</textarea>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: PANEL CARD -->
+        <div class="panel-card">
+          <!-- 1. SEO ADVANCED BUTTON -->
+          <button type="button" id="btnOpenSeoModal" class="btn-seo-advanced" onclick="openSeoModal()">
+            <span class="seo-btn-left">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <span>Tùy chỉnh SEO nâng cao</span>
+            </span>
+            <span class="seo-word-badge" id="sidebarWordCount">0 từ</span>
+          </button>
+
+          <!-- 2. FEATURED IMAGE -->
+          <div class="sidebar-section">
+            <label class="sidebar-label">Featured Image</label>
+            <div id="fimgUploadBox" class="fimg-upload-box" onclick="openMediaModal('thumbnail')">
+              <div id="fimgPlaceholder" style={page.thumbnail ? 'display: none;' : ''}>
+                + Upload Image
+              </div>
+              <img 
+                id="fimgPreview" 
+                src={page.thumbnail || ''} 
+                alt="Featured preview" 
+                style={page.thumbnail ? 'display: block; width: 100%; border-radius: 6px; aspect-ratio: 16/10; object-fit: cover;' : 'display: none;'} 
+              />
+            </div>
+            <input type="hidden" id="thumbnailInput" name="thumbnail" value={page.thumbnail || ''} />
+            <div id="fimgActions" class="fimg-actions" style={page.thumbnail ? 'display: flex;' : 'display: none;'}>
+              <button type="button" class="btn-fimg-change" onclick="openMediaModal('thumbnail')">Đổi ảnh</button>
+              <button type="button" class="btn-fimg-remove" onclick="removeThumbnail()">Xóa</button>
+            </div>
+          </div>
+
+          <!-- 3. STATUS -->
+          <div class="sidebar-section">
+            <label class="sidebar-label">Status</label>
+            <select name="status" id="statusSelect" class="sidebar-select">
+              <option value="draft" selected={page.status === 'draft'}>Draft</option>
+              <option value="published" selected={page.status === 'published'}>Published</option>
+            </select>
+          </div>
+
+          <!-- 4. GIAO DIỆN HIỂN THỊ -->
+          <div class="sidebar-section">
+            <label class="sidebar-label-caps">GIAO DIỆN HIỂN THỊ</label>
+            <select name="template" id="templateSelect" class="sidebar-select">
+              <option value="standard" selected={page.template !== 'landing'}>Trang Tiêu Chuẩn</option>
+              <option value="landing" selected={page.template === 'landing'}>Landing Page (Full-width)</option>
+            </select>
+            <p class="sidebar-hint">* Chọn <strong>Landing Page</strong> nếu bạn dùng code HTML ở tab Raw để thiết kế tràn viền giống Elementor.</p>
+          </div>
+
+          <!-- 5. DANH MỤC TRANG -->
+          <div class="sidebar-section">
+            <label class="sidebar-label">Danh mục trang</label>
+            <div class="categories-list">
+              {pageGroups.map((g) => (
+                <label class="cat-checkbox-item">
+                  <input type="checkbox" name="category" value={g} checked={page.category === g} />
+                  <span>{g}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <!-- 6. TAGS -->
+          <div class="sidebar-section">
+            <div class="sidebar-label-row">
+              <label class="sidebar-label">Thẻ (Tags)</label>
+              <span class="sidebar-badge-count" id="tagsCountBadge">0 thẻ</span>
+            </div>
+            
+            <div class="tags-pills-wrap" id="tagsPillsWrap"></div>
+
+            <div class="tag-input-row">
+              <input 
+                type="text" 
+                id="tagInput" 
+                class="sidebar-input" 
+                placeholder="Nhập thẻ rồi nhấn Enter..." 
+                onkeydown="if(event.key==='Enter'){event.preventDefault();addTagFromInput();}"
+              />
+              <button type="button" class="btn-sidebar-add" onclick="addTagFromInput()">+ Thêm</button>
+            </div>
+
+            <div class="tag-suggestions">
+              <span style="font-size: 11px; color: #94a3b8; align-self: center;">Gợi ý:</span>
+              <button type="button" class="tag-suggest-btn" onclick="addTag('Giới Thiệu')">+ Giới Thiệu</button>
+              <button type="button" class="tag-suggest-btn" onclick="addTag('Chính Sách')">+ Chính Sách</button>
+              <button type="button" class="tag-suggest-btn" onclick="addTag('Showroom')">+ Showroom</button>
+              <button type="button" class="tag-suggest-btn" onclick="addTag('Hỗ Trợ')">+ Hỗ Trợ</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HIDDEN FORM FIELDS -->
+      <input type="hidden" name="action" id="formAction" value="publish" />
+      <input type="hidden" name="slug" id="hiddenSlug" value={page.slug || ''} />
+      <input type="hidden" name="excerpt" id="hiddenExcerpt" value={page.excerpt || ''} />
+      <input type="hidden" name="seo_title" id="hiddenSeoTitle" value={page.seo_title || ''} />
+      <input type="hidden" name="seo_description" id="hiddenSeoDescription" value={page.seo_description || ''} />
+      <input type="hidden" name="focus_keyword" id="hiddenFocusKeyword" value={page.focus_keyword || ''} />
+      <input type="hidden" name="custom_schema" id="hiddenCustomSchema" value={page.custom_schema || ''} />
+      <input type="hidden" name="css_content" id="hiddenCssContent" value={page.css_content || ''} />
+      <input type="hidden" name="tags" id="hiddenTags" value={page.tags || ''} />
+      <input type="hidden" name="noindex" id="hiddenNoindex" value="0" />
+      <input type="hidden" name="nofollow" id="hiddenNofollow" value="0" />
+
+      <!-- SEO MODAL -->
+      <div id="seoModalOverlay" class="seo-modal-overlay">
+        <div class="seo-modal-content">
+          <div class="seo-modal-head">
+            <h3>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <span>Tùy chỉnh SEO nâng cao</span>
+            </h3>
+            <button type="button" class="seo-close-btn" onclick="closeSeoModal()">✕</button>
+          </div>
+
+          <!-- Google SERP Snippet Preview -->
+          <div class="google-snippet-box">
+            <div class="google-snippet-url" id="serpPreviewUrl">
+              thegioidaquy.net › {page.slug}
+            </div>
+            <div class="google-snippet-title" id="serpPreviewTitle">
+              {page.seo_title || page.title}
+            </div>
+            <div class="google-snippet-desc" id="serpPreviewDesc">
+              {page.seo_description || page.excerpt || 'Đoạn trích mô tả xuất hiện trên kết quả tìm kiếm Google...'}
+            </div>
+          </div>
+
+          <!-- SEO Title Input -->
+          <div class="seo-input-group">
+            <div class="seo-input-label-row">
+              <label class="seo-input-label">Tiêu đề SEO (Title Tag)</label>
+              <span class="seo-counter" id="seoTitleCounter">0 / 60</span>
+            </div>
+            <input 
+              type="text" 
+              id="seoTitleInput" 
+              class="seo-text-input" 
+              placeholder="Nhập tiêu đề chuẩn SEO Google..." 
+              value={page.seo_title || ''}
+              oninput="updateSeoTitle(this.value)"
+            />
+            <div class="seo-meter-track">
+              <div id="seoTitleProgress" class="seo-meter-fill"></div>
+            </div>
+          </div>
+
+          <!-- Slug / Permalink Input -->
+          <div class="seo-input-group">
+            <div class="seo-input-label-row">
+              <label class="seo-input-label">Đường dẫn tĩnh (Slug / Permalink)</label>
+            </div>
+            <input 
+              type="text" 
+              id="seoSlugInput" 
+              class="seo-text-input" 
+              placeholder="duong-dan-trang" 
+              value={page.slug || ''}
+              oninput="updateSeoSlug(this.value)"
+            />
+          </div>
+
+          <!-- SEO Description Input -->
+          <div class="seo-input-group">
+            <div class="seo-input-label-row">
+              <label class="seo-input-label">Mô tả SEO (Meta Description / Excerpt)</label>
+              <span class="seo-counter" id="seoDescCounter">0 / 160</span>
+            </div>
+            <textarea 
+              id="seoDescInput" 
+              class="seo-text-input" 
+              rows="3" 
+              placeholder="Đoạn trích tóm tắt này sẽ xuất hiện trên kết quả tìm kiếm Google..." 
+              oninput="updateSeoDesc(this.value)"
+            >{page.seo_description || page.excerpt || ''}</textarea>
+            <div class="seo-meter-track">
+              <div id="seoDescProgress" class="seo-meter-fill"></div>
+            </div>
+          </div>
+
+          <!-- Custom CSS Input -->
+          <div class="seo-input-group">
+            <div class="seo-input-label-row">
+              <label class="seo-input-label">Custom CSS Riêng</label>
+            </div>
+            <textarea 
+              id="customCssInput" 
+              class="seo-text-input" 
+              rows="3" 
+              placeholder="/* Nhập mã CSS tùy chỉnh riêng cho trang này */"
+              style="font-family: monospace; font-size: 12px;"
+              oninput="document.getElementById('hiddenCssContent').value = this.value"
+            >{page.css_content || ''}</textarea>
+          </div>
+
+          <!-- Custom Schema JSON-LD -->
+          <div class="seo-input-group">
+            <div class="seo-input-label-row">
+              <label class="seo-input-label">Custom Schema JSON-LD</label>
+            </div>
+            <textarea 
+              id="customSchemaInput" 
+              class="seo-text-input" 
+              rows="3" 
+              placeholder='{ "@context": "https://schema.org", "@type": "WebPage", ... }'
+              style="font-family: monospace; font-size: 12px;"
+              oninput="document.getElementById('hiddenCustomSchema').value = this.value"
+            >{page.custom_schema || ''}</textarea>
+          </div>
+
+          <!-- Modal Footer -->
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+            <button type="button" class="btn-top-publish" onclick="closeSeoModal()">
+              Xác nhận & Đóng
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEDIA PICKER MODAL -->
+      <div id="mediaModalOverlay" class="media-modal-overlay">
+        <div class="media-modal-content">
+          <div class="media-modal-head">
+            <h3>🖼️ Thư Viện Hình Ảnh</h3>
+            <button type="button" class="seo-close-btn" onclick="closeMediaModal()">✕</button>
+          </div>
+          <div class="media-grid-scroll" id="mediaGrid">
+            {mediaList.map((m) => (
+              <div class="media-pick-item" onclick={`selectMedia('${m.url}')`}>
+                <img src={m.url} alt={m.filename} />
+              </div>
+            ))}
+          </div>
+          <div class="media-modal-foot">
+            <a href="/admin/media" target="_blank" style="font-size: 13px; color: #2563eb; text-decoration: none; font-weight: 600;">
+              ↗ Quản lý & Tải thêm ảnh lên
+            </a>
+            <button type="button" class="btn-top-action" onclick="closeMediaModal()">
+              Đóng
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- QUILL EDITOR JS -->
+  <script is:inline src="/libs/quill.min.js"></script>
+
+  <script is:inline>
+    var quill = null;
+    var currentTarget = 'thumbnail';
+
+    // Initialize Quill
+    window.addEventListener('DOMContentLoaded', function() {
+      quill = new Quill('#quillEditor', {
+        theme: 'snow',
+        placeholder: 'Bắt đầu viết nội dung trang...',
+        modules: {
+          toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            ['blockquote', 'code-block'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            ['link', 'image'],
+            ['clean']
+          ]
+        }
+      });
+
+      var initialContent = document.getElementById('hiddenContent').value;
+      if (initialContent) {
+        quill.root.innerHTML = initialContent;
+      }
+
+      var initialText = quill.getText().trim();
+      var initialWords = initialText.length > 0 ? initialText.split(/\s+/).length : 0;
+      document.getElementById('sidebarWordCount').innerText = initialWords + ' từ';
+
+      var initTitle = document.getElementById('seoTitleInput').value;
+      if (initTitle) updateSeoTitle(initTitle);
+      var initDesc = document.getElementById('seoDescInput').value;
+      if (initDesc) updateSeoDesc(initDesc);
+
+      document.getElementById('btnUndo').addEventListener('click', function() {
+        if (quill && quill.history) quill.history.undo();
+      });
+      document.getElementById('btnRedo').addEventListener('click', function() {
+        if (quill && quill.history) quill.history.redo();
+      });
+
+      quill.on('text-change', function() {
+        var text = quill.getText().trim();
+        var words = text.length > 0 ? text.split(/\s+/).length : 0;
+        document.getElementById('sidebarWordCount').innerText = words + ' từ';
+
+        document.getElementById('hiddenContent').value = quill.root.innerHTML;
+
+        var hiddenExcerpt = document.getElementById('hiddenExcerpt');
+        if (!hiddenExcerpt.value && text.length > 0) {
+          var cleanExcerpt = text.slice(0, 150).replace(/\n/g, ' ');
+          document.getElementById('serpPreviewDesc').innerText = cleanExcerpt;
+        }
+      });
+
+      document.getElementById('btnPreview').addEventListener('click', function() {
+        var title = document.getElementById('titleInput').value || 'Untitled page';
+        var content = quill ? quill.root.innerHTML : '';
+        var win = window.open('', '_blank');
+        win.document.write('<html><head><title>' + title + ' (Xem trước)</title><link rel="stylesheet" href="/libs/quill.snow.css"><style>body{max-width:800px;margin:40px auto;font-family:sans-serif;line-height:1.8;padding:0 20px;}h1{font-size:32px;font-weight:700;margin-bottom:24px;}</style></head><body><h1>' + title + '</h1><div>' + content + '</div></body></html>');
+      });
+    });
+
+    function handleTitleChange(val) {
+      var title = val.trim();
+      var slug = title
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'D')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+      if (!document.getElementById('seoSlugInput').value) {
+        document.getElementById('hiddenSlug').value = slug;
+        document.getElementById('seoSlugInput').value = slug;
+        document.getElementById('serpPreviewUrl').innerText = 'thegioidaquy.net › ' + (slug || 'untitled-page');
+      }
+
+      if (!document.getElementById('seoTitleInput').value) {
+        document.getElementById('serpPreviewTitle').innerText = title || 'Untitled page...';
+      }
+    }
+
+    function switchMode(mode) {
+      var btnVisual = document.getElementById('btnModeVisual');
+      var btnCode = document.getElementById('btnModeCode');
+      var wrapVisual = document.getElementById('visualEditorWrapper');
+      var wrapCode = document.getElementById('codeEditorWrapper');
+      var rawText = document.getElementById('rawContentTextarea');
+
+      if (mode === 'visual') {
+        btnVisual.classList.add('active');
+        btnCode.classList.remove('active');
+        wrapVisual.style.display = 'block';
+        wrapCode.style.display = 'none';
+
+        if (quill) {
+          quill.root.innerHTML = rawText.value;
+          document.getElementById('hiddenContent').value = rawText.value;
+        }
+      } else {
+        btnCode.classList.add('active');
+        btnVisual.classList.remove('active');
+        wrapCode.style.display = 'block';
+        wrapVisual.style.display = 'none';
+
+        if (quill) {
+          rawText.value = quill.root.innerHTML;
+          document.getElementById('hiddenContent').value = rawText.value;
+        }
+      }
+    }
+
+    function syncFromRaw() {
+      var rawText = document.getElementById('rawContentTextarea').value;
+      document.getElementById('hiddenContent').value = rawText;
+      var cleanText = rawText.replace(/<[^>]*>/g, '').trim();
+      var words = cleanText.length > 0 ? cleanText.split(/\s+/).length : 0;
+      document.getElementById('sidebarWordCount').innerText = words + ' từ';
+    }
+
+    function savePage(action) {
+      document.getElementById('formAction').value = action;
+      document.getElementById('statusSelect').value = action === 'draft' ? 'draft' : 'published';
+
+      var isCode = document.getElementById('codeEditorWrapper').style.display === 'block';
+      if (isCode) {
+        document.getElementById('hiddenContent').value = document.getElementById('rawContentTextarea').value;
+      } else if (quill) {
+        document.getElementById('hiddenContent').value = quill.root.innerHTML;
+      }
+
+      var titleInput = document.getElementById('titleInput');
+      if (!titleInput.value.trim()) {
+        titleInput.value = 'Untitled page...';
+      }
+
+      document.getElementById('pageForm').submit();
+    }
+
+    function openSeoModal() {
+      document.getElementById('seoModalOverlay').style.display = 'flex';
+      var titleVal = document.getElementById('titleInput').value.trim();
+      if (!document.getElementById('seoTitleInput').value && titleVal) {
+        document.getElementById('seoTitleInput').value = titleVal;
+        updateSeoTitle(titleVal);
+      }
+      if (!document.getElementById('seoSlugInput').value) {
+        var slugVal = document.getElementById('hiddenSlug').value;
+        document.getElementById('seoSlugInput').value = slugVal;
+      }
+    }
+
+    function closeSeoModal() {
+      document.getElementById('seoModalOverlay').style.display = 'none';
+    }
+
+    function updateSeoTitle(val) {
+      var len = val.length;
+      document.getElementById('seoTitleCounter').innerText = len + ' / 60';
+      document.getElementById('hiddenSeoTitle').value = val;
+      document.getElementById('serpPreviewTitle').innerText = val || document.getElementById('titleInput').value || 'Untitled page...';
+
+      var pct = Math.min(100, Math.round((len / 60) * 100));
+      var bar = document.getElementById('seoTitleProgress');
+      bar.style.width = pct + '%';
+      bar.className = 'seo-meter-fill' + (len > 60 ? ' danger' : (len >= 40 ? ' good' : ' warning'));
+    }
+
+    function updateSeoSlug(val) {
+      var slug = val.toLowerCase().replace(/[^a-z0-9\-]/g, '');
+      document.getElementById('hiddenSlug').value = slug;
+      document.getElementById('serpPreviewUrl').innerText = 'thegioidaquy.net › ' + (slug || 'untitled-page');
+    }
+
+    function updateSeoDesc(val) {
+      var len = val.length;
+      document.getElementById('seoDescCounter').innerText = len + ' / 160';
+      document.getElementById('hiddenSeoDescription').value = val;
+      document.getElementById('hiddenExcerpt').value = val;
+      document.getElementById('serpPreviewDesc').innerText = val || 'Bắt đầu viết nội dung trang để tự động cập nhật đoạn trích mô tả xuất hiện trên kết quả tìm kiếm Google...';
+
+      var pct = Math.min(100, Math.round((len / 160) * 100));
+      var bar = document.getElementById('seoDescProgress');
+      bar.style.width = pct + '%';
+      bar.className = 'seo-meter-fill' + (len > 160 ? ' danger' : (len >= 100 ? ' good' : ' warning'));
+    }
+
+    function openMediaModal(target) {
+      currentTarget = target || 'thumbnail';
+      document.getElementById('mediaModalOverlay').style.display = 'flex';
+    }
+
+    function closeMediaModal() {
+      document.getElementById('mediaModalOverlay').style.display = 'none';
+    }
+
+    function selectMedia(url) {
+      if (currentTarget === 'thumbnail') {
+        document.getElementById('thumbnailInput').value = url;
+        document.getElementById('fimgPreview').src = url;
+        document.getElementById('fimgPreview').style.display = 'block';
+        document.getElementById('fimgPlaceholder').style.display = 'none';
+        document.getElementById('fimgActions').style.display = 'flex';
+      } else if (quill) {
+        var range = quill.getSelection(true);
+        quill.insertEmbed(range.index, 'image', url);
+      }
+      closeMediaModal();
+    }
+
+    function removeThumbnail() {
+      document.getElementById('thumbnailInput').value = '';
+      document.getElementById('fimgPreview').src = '';
+      document.getElementById('fimgPreview').style.display = 'none';
+      document.getElementById('fimgPlaceholder').style.display = 'block';
+      document.getElementById('fimgActions').style.display = 'none';
+    }
+
+    // Tags Management
+    var initialTagsStr = document.getElementById('hiddenTags') ? document.getElementById('hiddenTags').value : '';
+    var currentTags = initialTagsStr ? initialTagsStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+
+    function escapeHtml(str) {
+      return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function escapeJsString(str) {
+      return (str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
+
+    function renderTags() {
+      var wrap = document.getElementById('tagsPillsWrap');
+      var badge = document.getElementById('tagsCountBadge');
+      var hidden = document.getElementById('hiddenTags');
+      if (!wrap) return;
+
+      wrap.innerHTML = '';
+      currentTags.forEach(function(tag) {
+        var pill = document.createElement('span');
+        pill.className = 'tag-pill-item';
+        pill.innerHTML = '<span>' + escapeHtml(tag) + '</span><button type="button" class="btn-tag-remove" onclick="removeTag(\'' + escapeJsString(tag) + '\')">&times;</button>';
+        wrap.appendChild(pill);
+      });
+
+      if (badge) badge.innerText = currentTags.length + ' thẻ';
+      if (hidden) hidden.value = currentTags.join(', ');
+    }
+
+    function addTag(tag) {
+      var clean = (tag || '').trim();
+      if (!clean) return;
+      if (!currentTags.includes(clean)) {
+        currentTags.push(clean);
+        renderTags();
+      }
+    }
+
+    function removeTag(tag) {
+      currentTags = currentTags.filter(function(t) { return t !== tag; });
+      renderTags();
+    }
+
+    function addTagFromInput() {
+      var input = document.getElementById('tagInput');
+      if (!input) return;
+      var val = input.value.trim();
+      if (val) {
+        var parts = val.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+        parts.forEach(function(p) { addTag(p); });
+        input.value = '';
+      }
+    }
+
+    // Render initial tags on load
+    renderTags();
+  </script>
+</AdminLayout>

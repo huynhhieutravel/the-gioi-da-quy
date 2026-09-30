@@ -1,0 +1,204 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb } from '../../../lib/db';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+const settingsRows = (await db.prepare('SELECT key, value FROM settings').all<{ key: string; value: string }>()).results || [];
+const s: Record<string, string> = {};
+for (const row of settingsRows) {
+  s[row.key] = row.value;
+}
+---
+
+<AdminLayout title="Cài Đặt Showroom" activeNav="settings" breadcrumbs={[{ label: 'Cài Đặt Showroom' }]}>
+  <form id="settings-form" onsubmit="handleSaveSettings(event)">
+    <div class="page-header">
+      <div class="page-title">
+        <h2>Cài Đặt Hệ Thống & Cửa Hàng</h2>
+        <p>Cấu hình thông tin liên hệ, hotline Zalo, chính sách bảo hành và SEO toàn site</p>
+      </div>
+      <div class="page-actions">
+        <button type="submit" class="btn-primary" id="btn-save-settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+          </svg>
+          <span>Lưu Cài Đặt</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-grid-2col">
+      <div>
+        <!-- STORE INFO -->
+        <div class="admin-card">
+          <div class="card-header-clean">
+            <h3>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: var(--gold-400);">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+              Thông Tin Showroom & Cửa Hàng
+            </h3>
+          </div>
+
+          <div class="form-group">
+            <label for="site_name">Tên Thương Hiệu Cửa Hàng</label>
+            <input type="text" id="site_name" name="site_name" value={s.site_name || 'Thế Giới Đá Quý - Phong Thủy Hoa Mộc Lan'} class="form-control" />
+          </div>
+
+          <div class="form-group">
+            <label for="slogan">Khẩu Hiệu / Slogan</label>
+            <input type="text" id="slogan" name="slogan" value={s.slogan || 'Vật Phẩm Phong Thủy & Đá Quý Tự Nhiên 100%'} class="form-control" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="hotline">Hotline Bán Hàng</label>
+              <input type="text" id="hotline" name="hotline" value={s.hotline || '0909.468.057'} class="form-control" />
+            </div>
+
+            <div class="form-group">
+              <label for="zalo">Số Zalo Tư Vấn Trực Tiếp</label>
+              <input type="text" id="zalo" name="zalo" value={s.zalo || '0909.468.057'} class="form-control" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="address">Địa Chỉ Showroom Trưng Bày</label>
+            <input type="text" id="address" name="address" value={s.address || '1163 Đường 3 Tháng 2, Phường 6, Quận 11, TP. Hồ Chí Minh'} class="form-control" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="owner">Chủ Cửa Hàng / Đại Diện</label>
+              <input type="text" id="owner" name="owner" value={s.owner || 'Đoàn Quốc Sơn'} class="form-control" />
+            </div>
+
+            <div class="form-group">
+              <label for="business_hours">Giờ Mở Cửa Phục Vụ</label>
+              <input type="text" id="business_hours" name="business_hours" value={s.business_hours || '08:00 - 21:00 (Thứ 2 - Chủ Nhật)'} class="form-control" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="email">Email Tiếp Nhận</label>
+              <input type="email" id="email" name="email" value={s.email || 'thegioidaquy.net@gmail.com'} class="form-control" />
+            </div>
+
+            <div class="form-group">
+              <label for="facebook">Fanpage Facebook</label>
+              <input type="url" id="facebook" name="facebook" value={s.facebook || 'https://facebook.com/phongthuyhoamoclan'} class="form-control" />
+            </div>
+          </div>
+        </div>
+
+        <!-- POLICIES -->
+        <div class="admin-card">
+          <div class="card-header-clean">
+            <h3>Cam Kết & Chính Sách Bán Hàng</h3>
+          </div>
+
+          <div class="form-group">
+            <label for="certification_policy">Cam Kết Chất Lượng & Giám Định</label>
+            <textarea id="certification_policy" name="certification_policy" class="form-control" style="min-height: 70px;">{s.certification_policy}</textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="warranty_policy">Chính Sách Bảo Hành</label>
+            <textarea id="warranty_policy" name="warranty_policy" class="form-control" style="min-height: 70px;">{s.warranty_policy}</textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="shipping_policy">Chính Sách Giao Nhận & COD Toàn Quốc</label>
+            <textarea id="shipping_policy" name="shipping_policy" class="form-control" style="min-height: 70px;">{s.shipping_policy}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: SEO DEFAULTS & SYSTEM STATUS -->
+      <div>
+        <div class="admin-card">
+          <div class="card-header-clean">
+            <h3>SEO Mặc Định Toàn Trang</h3>
+          </div>
+
+          <div class="form-group">
+            <label for="seo_title">Tiêu Đề Trang Chủ (Meta Title)</label>
+            <input type="text" id="seo_title" name="seo_title" value={s.seo_title} class="form-control" />
+          </div>
+
+          <div class="form-group">
+            <label for="seo_description">Mô Tả Trang Chủ (Meta Description)</label>
+            <textarea id="seo_description" name="seo_description" class="form-control" style="min-height: 100px;">{s.seo_description}</textarea>
+          </div>
+        </div>
+
+        <!-- CLOUDFLARE RUNTIME STATUS -->
+        <div class="admin-card">
+          <div class="card-header-clean">
+            <h3>Trạng Thái Hạ Tầng</h3>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px;">
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.02); border-radius: 6px;">
+              <span style="color: var(--text-dim);">Nền Tảng:</span>
+              <strong style="color: #fff;">Astro SSR + Cloudflare</strong>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.02); border-radius: 6px;">
+              <span style="color: var(--text-dim);">Cơ Sở Dữ Liệu:</span>
+              <span class="badge badge-moc">SQLite Local / Cloudflare D1</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.02); border-radius: 6px;">
+              <span style="color: var(--text-dim);">Lưu Trữ Ảnh Media:</span>
+              <span class="badge badge-tho">Local uploads / R2 Compatible</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.02); border-radius: 6px;">
+              <span style="color: var(--text-dim);">Môi Trường Chạy:</span>
+              <span class="badge badge-kim">Localhost:4321</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <script is:inline>
+    async function handleSaveSettings(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save-settings');
+      btn.disabled = true;
+      btn.innerText = 'Đang lưu...';
+
+      const formData = new FormData(e.target);
+      const payload = Object.fromEntries(formData.entries());
+
+      try {
+        const res = await fetch('/api/admin/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.showToast('Lưu cài đặt showroom thành công!', 'success');
+          setTimeout(() => window.location.reload(), 600);
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Không thể lưu cài đặt'));
+          btn.disabled = false;
+          btn.innerText = 'Lưu Cài Đặt';
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+        btn.disabled = false;
+        btn.innerText = 'Lưu Cài Đặt';
+      }
+    }
+  </script>
+</AdminLayout>

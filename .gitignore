@@ -1,0 +1,24 @@
+# Build and Dependencies
+node_modules/
+dist/
+.astro/
+
+# Cloudflare / Wrangler local state
+.wrangler/
+.mf/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS generated files
+.DS_Store
+Thumbs.db
+*.log
+
+# Local test databases & temporary screenshots in root
+/data.db
+/*_screenshot.png
+/*_fixed.png
+/all_discovered_links.txt

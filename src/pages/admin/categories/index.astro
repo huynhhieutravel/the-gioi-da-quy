@@ -1,0 +1,201 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb } from '../../../lib/db';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+
+// Fetch all categories with real product count from products table
+const categories = (await db.prepare(`
+  SELECT c.id, c.slug, c.name, c.description, c.element, c.sort_order,
+         COUNT(p.id) as product_count
+  FROM categories c
+  LEFT JOIN products p ON p.category_name = c.name
+  GROUP BY c.id
+  ORDER BY c.sort_order ASC
+`).all<any>()).results || [];
+---
+
+<AdminLayout title="Chủng Loại Đá Quý" activeNav="categories" breadcrumbs={[{ label: 'Chủng Loại Đá' }]}>
+  <div class="page-header">
+    <div class="page-title">
+      <h2>Chủng Loại Đá & Vật Phẩm Phong Thủy ({categories.length})</h2>
+      <p>Quản lý các dòng đá chủ lực: Thạch Anh, Mắt Hổ, Ruby, Cẩm Thạch, Linh Vật...</p>
+    </div>
+    <div class="page-actions">
+      <button type="button" class="btn-primary" onclick="openAddCategoryModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>+ Thêm Chủng Loại Mới</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="admin-card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th style="width: 60px; text-align: center;">Thứ Tự</th>
+            <th>Tên Chủng Loại Đá</th>
+            <th>Đường Dẫn Tĩnh (Slug)</th>
+            <th>Ngũ Hành</th>
+            <th>Mô Tả & Ý Nghĩa Năng Lượng</th>
+            <th style="text-align: center;">Số Sản Phẩm</th>
+            <th style="text-align: right;">Hành Động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {categories.map((c) => {
+            const badgeClass = c.element === 'Kim' ? 'badge-kim'
+              : c.element === 'Mộc' ? 'badge-moc'
+              : c.element === 'Thủy' ? 'badge-thuy'
+              : c.element === 'Hỏa' ? 'badge-hoa'
+              : c.element === 'Thổ' ? 'badge-tho' : 'badge-damenh';
+
+            return (
+              <tr id={`cat-row-${c.id}`}>
+                <td style="text-align: center; font-weight: 700; color: var(--gold-400);">
+                  {c.sort_order}
+                </td>
+                <td>
+                  <strong style="color: #0f172a; font-size: 14px; font-weight: 600;">{c.name}</strong>
+                </td>
+                <td>
+                  <code style="color: #2563eb; font-weight: 600;">{c.slug}</code>
+                </td>
+                <td>
+                  <span class={`badge ${badgeClass}`}>{c.element || 'Đa Mệnh'}</span>
+                </td>
+                <td style="max-width: 320px; font-size: 13px; color: var(--text-muted); line-height: 1.4;">
+                  {c.description}
+                </td>
+                <td style="text-align: center;">
+                  <a href={`/admin/products?cat=${encodeURIComponent(c.name)}`} class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; font-weight: 600; text-decoration: none;">
+                    {c.product_count} vật phẩm
+                  </a>
+                </td>
+                <td style="text-align: right;">
+                  <div class="action-buttons" style="justify-content: flex-end;">
+                    <a href={`/san-pham?cat=${encodeURIComponent(c.name)}`} target="_blank" class="btn-icon" title="Xem trên website">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    </a>
+                    <button 
+                      type="button" 
+                      class="btn-icon delete" 
+                      title="Xóa danh mục"
+                      onclick={`deleteCategory('${c.id}', '${c.name.replace(/'/g, "\\'")}')`}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ADD CATEGORY MODAL -->
+  <dialog id="cat-modal" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 28px; max-width: 550px; width: 90%; color: #0f172a; margin: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h3 style="font-size: 18px; color: #0f172a; font-weight: 700;">Thêm Chủng Loại Đá Quý Mới</h3>
+      <button type="button" class="btn-icon" style="width: 28px; height: 28px;" onclick="document.getElementById('cat-modal').close()">✕</button>
+    </div>
+
+    <form onsubmit="handleCreateCategory(event)">
+      <div class="form-group">
+        <label for="cat-name">Tên Chủng Loại Đá <span style="color: var(--ruby-500);">*</span></label>
+        <input type="text" id="cat-name" name="name" required class="form-control" placeholder="VD: Đá Sapphire Thiên Nhiên" />
+      </div>
+
+      <div class="form-group">
+        <label for="cat-element">Ngũ Hành Đại Diện</label>
+        <select id="cat-element" name="element" class="form-control">
+          <option value="Kim">Mệnh Kim</option>
+          <option value="Mộc">Mệnh Mộc</option>
+          <option value="Thủy">Mệnh Thủy</option>
+          <option value="Hỏa">Mệnh Hỏa</option>
+          <option value="Thổ">Mệnh Thổ</option>
+          <option value="Đa Mệnh" selected>Đa Mệnh (Hợp Mọi Mệnh)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="cat-desc">Mô Tả & Ý Nghĩa Năng Lượng</label>
+        <textarea id="cat-desc" name="description" class="form-control" placeholder="Tác dụng phong thủy của dòng đá này..." style="min-height: 90px;"></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('cat-modal').close()">Hủy</button>
+        <button type="submit" class="btn-primary" id="btn-cat-save">Lưu Chủng Loại</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script is:inline>
+    function openAddCategoryModal() {
+      document.getElementById('cat-modal').showModal();
+    }
+
+    async function handleCreateCategory(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-cat-save');
+      btn.disabled = true;
+
+      const formData = new FormData(e.target);
+      const payload = Object.fromEntries(formData.entries());
+
+      try {
+        const res = await fetch('/api/admin/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.showToast('Thêm chủng loại đá thành công!', 'success');
+          setTimeout(() => window.location.reload(), 600);
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Không thể tạo danh mục'));
+          btn.disabled = false;
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+        btn.disabled = false;
+      }
+    }
+
+    async function deleteCategory(id, name) {
+      if (!confirm(`Bạn có chắc chắn muốn xóa chủng loại "${name}" không?`)) return;
+
+      try {
+        const res = await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.success) {
+          const row = document.getElementById(`cat-row-${id}`);
+          if (row) row.remove();
+          window.showToast(`Đã xóa chủng loại: ${name}`, 'success');
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Không thể xóa'));
+        }
+      } catch (e) {
+        alert('Lỗi kết nối: ' + e.message);
+      }
+    }
+  </script>
+</AdminLayout>

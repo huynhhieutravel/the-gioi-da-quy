@@ -1,0 +1,796 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb } from '../../../lib/db';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+
+// Fetch all media items ordered by newest
+const rawMedia = (await db.prepare(`
+  SELECT id, url, filename, title, alt_text, mime_type, size_bytes, width, height, folder, created_at
+  FROM media
+  ORDER BY created_at DESC, id DESC
+`).all<any>()).results || [];
+
+const totalMedia = rawMedia.length;
+const totalBytes = rawMedia.reduce((acc, m) => acc + (m.size_bytes || 0), 0);
+const totalMb = (totalBytes / (1024 * 1024)).toFixed(1);
+
+// Client-side initial dataset (100% FIT Tour architecture)
+const initialData = rawMedia.map(m => ({
+  id: m.id,
+  url: m.url,
+  filename: m.filename || 'media-item',
+  title: m.title || '',
+  alt_text: m.alt_text || '',
+  mime_type: m.mime_type || 'image/jpeg',
+  size_bytes: m.size_bytes || 0,
+  size_kb: Math.round((m.size_bytes || 0) / 1024),
+  width: m.width || null,
+  height: m.height || null,
+  folder: m.folder || 'uploads',
+  created_at: m.created_at || ''
+}));
+---
+
+<AdminLayout title="Thư Viện Media" activeNav="media" breadcrumbs={[{ label: 'Thư Viện Media' }]}>
+  <!-- FULLSCREEN DRAG & DROP OVERLAY (Anti-flicker) -->
+  <div id="drag-drop-overlay" class="drag-overlay">
+    <div class="drag-overlay-icon">📥</div>
+    <h2 style="font-size: 26px; font-weight: 700; margin-bottom: 8px;">Thả hình ảnh vào đây để tải lên</h2>
+    <p style="font-size: 15px; opacity: 0.9;">Tự động nén WebP chuẩn FIT Tour trước khi lưu</p>
+  </div>
+
+  <div class="page-header">
+    <div class="page-title">
+      <h2>Thư Viện Media (<span id="header-total-count">{totalMedia}</span> tệp • <span id="header-total-mb">{totalMb}</span> MB)</h2>
+      <p>Quản lý toàn bộ tài nguyên hình ảnh sản phẩm đá quý, bài viết kiến thức và ấn phẩm showroom</p>
+    </div>
+    <div class="page-actions">
+      <label class="btn-primary" style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <span>+ Tải Lên Tệp Mới</span>
+        <input type="file" id="file-upload-input" multiple accept="image/*" style="display: none;" onchange="handleFileInputChange(event)" />
+      </label>
+    </div>
+  </div>
+
+  <!-- UPLOAD DROPZONE -->
+  <div 
+    id="dropzone"
+    style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 26px 20px; text-align: center; margin-bottom: 20px; background: #f8fafc; transition: all 0.2s ease; cursor: pointer;"
+    onclick="document.getElementById('file-upload-input').click()"
+  >
+    <div style="width: 44px; height: 44px; border-radius: 10px; background: #eff6ff; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 8px; color: #2563eb;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 22px; height: 22px;">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" y1="3" x2="12" y2="15"></line>
+      </svg>
+    </div>
+    <div style="font-size: 14px; font-weight: 600; color: #0f172a;">Kéo thả hình ảnh vào đây hoặc nhấp để chọn tệp từ máy tính</div>
+    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Hỗ trợ JPG, PNG, WebP, GIF. Tự động nén WebP chất lượng cao tối đa 2500px.</div>
+  </div>
+
+  <!-- FILTER & SEARCH BAR -->
+  <div class="admin-card" style="padding: 14px 20px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;">
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex: 1;">
+      <!-- Search Input -->
+      <div style="position: relative; width: 320px; max-width: 100%;">
+        <input 
+          type="text" 
+          id="search-input" 
+          class="form-control"
+          placeholder="Tìm theo tên tệp hoặc alt text..." 
+          style="padding-left: 36px; padding-right: 30px; height: 38px; font-size: 13px;"
+          oninput="handleSearchInput(event)"
+        />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: #94a3b8; pointer-events: none;">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </svg>
+        <button 
+          type="button" 
+          id="clear-search-btn" 
+          style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 14px; color: #94a3b8; cursor: pointer; display: none; padding: 2px;"
+          onclick="clearSearch()"
+        >✕</button>
+      </div>
+
+      <!-- Folder Filter Tabs -->
+      <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="folder-tabs">
+        <button type="button" class="btn-secondary active" data-folder="" onclick="filterByFolder('')" style="font-size: 13px; padding: 7px 12px;">
+          Tất cả (<span id="tab-count-all">{totalMedia}</span>)
+        </button>
+        <button type="button" class="btn-secondary" data-folder="products" onclick="filterByFolder('products')" style="font-size: 13px; padding: 7px 12px;">
+          Sản phẩm
+        </button>
+        <button type="button" class="btn-secondary" data-folder="news" onclick="filterByFolder('news')" style="font-size: 13px; padding: 7px 12px;">
+          Bài viết
+        </button>
+        <button type="button" class="btn-secondary" data-folder="site_assets" onclick="filterByFolder('site_assets')" style="font-size: 13px; padding: 7px 12px;">
+          Giao diện
+        </button>
+      </div>
+    </div>
+
+    <!-- Sort Dropdown -->
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 12px; color: #64748b; font-weight: 500;">Sắp xếp:</span>
+      <select id="sort-select" class="form-control" style="width: 170px; height: 38px; font-size: 13px;" onchange="handleSortChange(this.value)">
+        <option value="newest" selected>Mới nhất trước</option>
+        <option value="oldest">Cũ nhất trước</option>
+        <option value="name_asc">Tên tệp: A → Z</option>
+        <option value="size_desc">Dung lượng lớn nhất</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- BULK ACTIONS FLOATING TOOLBAR -->
+  <div id="bulk-toolbar" class="bulk-toolbar" style="display: none; align-items: center; justify-content: space-between; background: #eff6ff; border-color: #bfdbfe; color: #1e40af; margin-bottom: 20px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="font-weight: 700; font-size: 13px;" id="bulk-count-label">Đã chọn 0 tệp</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button type="button" class="btn-secondary" style="font-size: 12px; padding: 6px 12px; background: #fff;" onclick="copyAllSelectedUrls()">
+        📋 Sao chép danh sách URL
+      </button>
+      <button type="button" class="btn-secondary" style="font-size: 12px; padding: 6px 12px; color: #dc2626; border-color: #fca5a5; background: #fff;" onclick="deleteSelectedMedia()">
+        🗑 Xóa các tệp đã chọn
+      </button>
+      <button type="button" class="btn-secondary" style="font-size: 12px; padding: 6px 10px; background: #fff;" onclick="deselectAllCheckboxes()">
+        Bỏ chọn
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN MEDIA LAYOUT: GRID (1fr) + DETAIL PANEL (360px) -->
+  <div style="display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: flex-start;">
+    <!-- LEFT: MEDIA GRID -->
+    <div class="admin-card" style="padding: 20px; min-height: 480px;">
+      <div id="media-grid-container" class="media-grid">
+        <!-- Rendered dynamically via JavaScript for instant responsiveness -->
+      </div>
+      <div id="media-empty-state" style="display: none; text-align: center; padding: 60px 20px; color: #64748b;">
+        <div style="font-size: 36px; margin-bottom: 10px;">🔍</div>
+        <div style="font-size: 15px; font-weight: 600; color: #0f172a;">Không tìm thấy tệp tin phù hợp</div>
+        <p style="font-size: 13px; color: #64748b; margin-top: 4px;">Hãy thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc.</p>
+      </div>
+    </div>
+
+    <!-- RIGHT: DETAIL PANEL (Sticky, 100% FIT Tour style) -->
+    <div id="media-detail-panel" class="admin-card" style="position: sticky; top: 80px; padding: 20px; border-radius: 12px;">
+      <!-- EMPTY STATE -->
+      <div id="panel-empty" style="text-align: center; padding: 60px 10px; color: #64748b;">
+        <div style="font-size: 40px; margin-bottom: 12px;">🖼️</div>
+        <div style="font-size: 14px; font-weight: 600; color: #0f172a; margin-bottom: 6px;">Chọn một hình ảnh</div>
+        <div style="font-size: 12px; color: #64748b; line-height: 1.5;">Bấm vào một tệp hình ảnh bên trái để xem trước, sao chép URL hoặc chỉnh sửa thẻ Alt & Title SEO.</div>
+      </div>
+
+      <!-- ACTIVE DETAIL STATE -->
+      <div id="panel-content" style="display: none;">
+        <!-- Panel Header with Navigation Arrows -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" class="btn-icon" style="width: 28px; height: 28px;" title="Ảnh trước (Phím ←)" onclick="navigateMedia(-1)">◀</button>
+            <button type="button" class="btn-icon" style="width: 28px; height: 28px;" title="Ảnh tiếp theo (Phím →)" onclick="navigateMedia(1)">▶</button>
+            <span style="font-size: 12px; font-weight: 600; color: #64748b; margin-left: 4px;" id="panel-nav-pos">1 / 1</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="save-status-indicator" class="save-status-indicator">✓ Đã lưu vào DB</span>
+            <button type="button" class="btn-icon" style="width: 28px; height: 28px;" onclick="closeDetailPanel()" title="Đóng panel (Phím Esc)">✕</button>
+          </div>
+        </div>
+
+        <!-- Image Preview Box -->
+        <div style="background: #f1f5f9; border-radius: 8px; overflow: hidden; aspect-ratio: 16/10; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; border: 1px solid #e2e8f0;">
+          <img id="detail-preview-img" src="" alt="" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+        </div>
+
+        <!-- Metadata Information -->
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px;">
+          <div>
+            <span style="color: #64748b; display: block; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Tên tệp:</span>
+            <strong id="detail-filename" style="color: #0f172a; word-break: break-all; font-size: 13px;"></strong>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <span style="color: #64748b; display: block; font-size: 11px; text-transform: uppercase; font-weight: 700;">Dung lượng:</span>
+              <span id="detail-size" style="color: #0f172a; font-weight: 600; font-size: 12px;"></span>
+            </div>
+            <div>
+              <span style="color: #64748b; display: block; font-size: 11px; text-transform: uppercase; font-weight: 700;">Ngày tải lên:</span>
+              <span id="detail-date" style="color: #64748b; font-size: 12px;"></span>
+            </div>
+          </div>
+
+          <!-- Public URL Input with 1-click Copy -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700;">Đường Dẫn URL Công Khai:</label>
+            <div style="display: flex; gap: 6px; margin-top: 4px;">
+              <input type="text" id="detail-url" readonly class="form-control" style="font-family: monospace; font-size: 12px; padding: 6px 10px; background: #f8fafc;" />
+              <button type="button" class="btn-primary" style="padding: 6px 14px; font-size: 12px; white-space: nowrap;" id="btn-copy-url" onclick="copyCurrentMediaUrl()">
+                📋 Copy
+              </button>
+            </div>
+          </div>
+
+          <!-- Alt Text Input (Auto-save) -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="detail-alt" style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700;">
+              Văn Bản Thay Thế (Alt Text - SEO):
+            </label>
+            <input 
+              type="text" 
+              id="detail-alt" 
+              class="form-control" 
+              style="font-size: 13px; margin-top: 4px;" 
+              oninput="triggerAutoSave()" 
+              placeholder="Mô tả hình ảnh cho Google Tìm Kiếm..." 
+            />
+            <span style="font-size: 11px; color: #94a3b8; display: block; margin-top: 3px;">Tự động lưu sau 600ms khi gõ</span>
+          </div>
+
+          <!-- Title Input (Auto-save) -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="detail-title" style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700;">
+              Tiêu Đề Tệp (Title):
+            </label>
+            <input 
+              type="text" 
+              id="detail-title" 
+              class="form-control" 
+              style="font-size: 13px; margin-top: 4px;" 
+              oninput="triggerAutoSave()" 
+              placeholder="Tiêu đề hiển thị..." 
+            />
+          </div>
+
+          <!-- Delete Action Button -->
+          <div style="margin-top: 8px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+            <button type="button" class="btn-secondary" style="width: 100%; color: #dc2626; border-color: #fca5a5; font-size: 12px; padding: 8px;" onclick="deleteCurrentMedia()">
+              🗑 Xóa Tệp Này Vĩnh Viễn
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT DEFINITION: PASSED DATA FROM SSR (100% FIT Tour Architecture) -->
+  <script is:inline define:vars={{ initialData }}>
+    let allMedia = Array.isArray(initialData) ? initialData : [];
+    let activeMediaId = null;
+    let currentFolder = '';
+    let currentSearch = '';
+    let currentSort = 'newest';
+    let selectedIds = new Set();
+    let autoSaveTimer = null;
+    let dragCounter = 0;
+
+    // Helper: Normalize string for diacritics-insensitive Vietnamese search
+    function normalizeStr(str) {
+      if (!str) return '';
+      return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    // Client-side WebP Compression (Canvas API - Approach A from knowledge base)
+    async function compressToWebP(file) {
+      if (file.type === 'image/gif' || file.type === 'image/svg+xml') return file;
+      if (!file.type.startsWith('image/')) return file;
+
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let w = img.width;
+            let h = img.height;
+            const maxDim = 2500;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+              } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+              }
+            }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) return resolve(file);
+                const newName = file.name.replace(/\.[^/.]+$/, '') + '.webp';
+                resolve(new File([blob], newName, { type: 'image/webp' }));
+              },
+              'image/webp',
+              0.9
+            );
+          };
+          img.onerror = () => resolve(file);
+          img.src = e.target.result;
+        };
+        reader.onerror = () => resolve(file);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Get current filtered and sorted media items
+    function getFilteredMedia() {
+      let filtered = [...allMedia];
+
+      // Folder filter
+      if (currentFolder) {
+        filtered = filtered.filter(m => m.folder === currentFolder);
+      }
+
+      // Search query filter
+      if (currentSearch) {
+        const q = normalizeStr(currentSearch);
+        filtered = filtered.filter(m => 
+          normalizeStr(m.filename).includes(q) || 
+          normalizeStr(m.alt_text).includes(q) || 
+          normalizeStr(m.title).includes(q)
+        );
+      }
+
+      // Sort
+      if (currentSort === 'newest') {
+        filtered.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+      } else if (currentSort === 'oldest') {
+        filtered.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+      } else if (currentSort === 'name_asc') {
+        filtered.sort((a, b) => (a.filename || '').localeCompare(b.filename || ''));
+      } else if (currentSort === 'size_desc') {
+        filtered.sort((a, b) => (b.size_bytes || 0) - (a.size_bytes || 0));
+      }
+
+      return filtered;
+    }
+
+    // Render Grid
+    function renderGrid() {
+      const container = document.getElementById('media-grid-container');
+      const emptyState = document.getElementById('media-empty-state');
+      const filtered = getFilteredMedia();
+
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+
+      container.innerHTML = filtered.map((m) => {
+        const isSelected = selectedIds.has(m.id);
+        const isActive = activeMediaId === m.id;
+        const sizeText = m.size_kb ? `${m.size_kb} KB` : '';
+
+        return `
+          <div 
+            class="media-item-card ${isActive ? 'active' : ''} ${isSelected ? 'has-selected' : ''}" 
+            id="card-${m.id}"
+            onclick="handleCardClick('${m.id}')"
+            title="${m.filename} (${sizeText})"
+          >
+            <input 
+              type="checkbox" 
+              class="media-checkbox" 
+              ${isSelected ? 'checked' : ''}
+              onclick="handleCheckboxClick(event, '${m.id}')"
+            />
+            <img src="${m.url}" alt="${m.alt_text || m.filename}" loading="lazy" />
+            <div class="media-item-info">
+              <span style="font-weight: 500;">${m.filename}</span>
+              ${sizeText ? `<span style="opacity: 0.8; margin-left: 4px; font-size: 10px;">• ${sizeText}</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Card Selection & Detail Panel
+    function handleCardClick(id) {
+      activeMediaId = id;
+      document.querySelectorAll('.media-item-card').forEach(c => c.classList.remove('active'));
+      const card = document.getElementById(`card-${id}`);
+      if (card) card.classList.add('active');
+
+      openDetailPanel(id);
+    }
+
+    function openDetailPanel(id) {
+      const media = allMedia.find(m => m.id === id);
+      if (!media) return;
+
+      const filtered = getFilteredMedia();
+      const currentIndex = filtered.findIndex(m => m.id === id);
+
+      document.getElementById('panel-empty').style.display = 'none';
+      document.getElementById('panel-content').style.display = 'block';
+
+      if (currentIndex !== -1) {
+        document.getElementById('panel-nav-pos').innerText = `${currentIndex + 1} / ${filtered.length}`;
+      }
+
+      const img = document.getElementById('detail-preview-img');
+      img.src = media.url;
+      img.alt = media.alt_text || media.filename;
+
+      document.getElementById('detail-filename').innerText = media.filename;
+      document.getElementById('detail-size').innerText = `${media.size_kb || 0} KB`;
+      document.getElementById('detail-date').innerText = (media.created_at || '').slice(0, 10) || 'Hôm nay';
+      
+      const fullUrl = media.url.startsWith('http') ? media.url : `${window.location.origin}${media.url}`;
+      document.getElementById('detail-url').value = fullUrl;
+
+      document.getElementById('detail-alt').value = media.alt_text || '';
+      document.getElementById('detail-title').value = media.title || '';
+
+      // Reset copy button state
+      const copyBtn = document.getElementById('btn-copy-url');
+      copyBtn.innerText = '📋 Copy';
+      copyBtn.classList.remove('btn-success');
+    }
+
+    function closeDetailPanel() {
+      activeMediaId = null;
+      document.querySelectorAll('.media-item-card').forEach(c => c.classList.remove('active'));
+      document.getElementById('panel-empty').style.display = 'block';
+      document.getElementById('panel-content').style.display = 'none';
+    }
+
+    // Navigation between media in Detail Panel (← / →)
+    function navigateMedia(step) {
+      const filtered = getFilteredMedia();
+      if (filtered.length <= 1) return;
+
+      let idx = filtered.findIndex(m => m.id === activeMediaId);
+      if (idx === -1) idx = 0;
+
+      let nextIdx = idx + step;
+      if (nextIdx < 0) nextIdx = filtered.length - 1;
+      if (nextIdx >= filtered.length) nextIdx = 0;
+
+      handleCardClick(filtered[nextIdx].id);
+    }
+
+    // Checkbox & Bulk Actions
+    function handleCheckboxClick(e, id) {
+      e.stopPropagation();
+      if (selectedIds.has(id)) {
+        selectedIds.delete(id);
+      } else {
+        selectedIds.add(id);
+      }
+      updateBulkToolbar();
+    }
+
+    function updateBulkToolbar() {
+      const toolbar = document.getElementById('bulk-toolbar');
+      const countLabel = document.getElementById('bulk-count-label');
+      const count = selectedIds.size;
+
+      if (count > 0) {
+        toolbar.style.display = 'flex';
+        countLabel.innerText = `Đã chọn ${count} tệp`;
+      } else {
+        toolbar.style.display = 'none';
+      }
+
+      // Update card visual check state
+      document.querySelectorAll('.media-item-card').forEach(card => {
+        const id = card.id.replace('card-', '');
+        if (selectedIds.has(id)) {
+          card.classList.add('has-selected');
+        } else {
+          card.classList.remove('has-selected');
+        }
+      });
+    }
+
+    function deselectAllCheckboxes() {
+      selectedIds.clear();
+      document.querySelectorAll('.media-checkbox').forEach(cb => cb.checked = false);
+      updateBulkToolbar();
+    }
+
+    function copyAllSelectedUrls() {
+      const urls = [];
+      selectedIds.forEach(id => {
+        const m = allMedia.find(item => item.id === id);
+        if (m) {
+          const full = m.url.startsWith('http') ? m.url : `${window.location.origin}${m.url}`;
+          urls.push(full);
+        }
+      });
+
+      if (urls.length === 0) return;
+      navigator.clipboard.writeText(urls.join('\n')).then(() => {
+        window.showToast(`Đã sao chép ${urls.length} link vào clipboard!`, 'success');
+      });
+    }
+
+    // Copy single URL
+    function copyCurrentMediaUrl() {
+      const input = document.getElementById('detail-url');
+      input.select();
+      navigator.clipboard.writeText(input.value).then(() => {
+        const btn = document.getElementById('btn-copy-url');
+        btn.innerText = '✓ Đã chép!';
+        setTimeout(() => { btn.innerText = '📋 Copy'; }, 2000);
+        window.showToast('Đã sao chép link ảnh vào bộ nhớ tạm!', 'success');
+      });
+    }
+
+    // Auto-save debounce (600ms) to /api/admin/media
+    function triggerAutoSave() {
+      clearTimeout(autoSaveTimer);
+      const indicator = document.getElementById('save-status-indicator');
+      indicator.classList.remove('show');
+
+      autoSaveTimer = setTimeout(async () => {
+        if (!activeMediaId) return;
+
+        const alt_text = document.getElementById('detail-alt').value.trim();
+        const title = document.getElementById('detail-title').value.trim();
+
+        // Update local state
+        const target = allMedia.find(m => m.id === activeMediaId);
+        if (target) {
+          target.alt_text = alt_text;
+          target.title = title;
+        }
+
+        try {
+          const res = await fetch('/api/admin/media', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: activeMediaId, alt_text, title })
+          });
+          const data = await res.json();
+          if (data.success) {
+            indicator.classList.add('show');
+            setTimeout(() => indicator.classList.remove('show'), 2500);
+          }
+        } catch (err) {
+          console.error('Auto save error:', err);
+        }
+      }, 600);
+    }
+
+    // Delete single media
+    async function deleteCurrentMedia() {
+      if (!activeMediaId) return;
+      const media = allMedia.find(m => m.id === activeMediaId);
+      if (!media) return;
+
+      if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn tệp "${media.filename}" không?`)) return;
+
+      try {
+        const res = await fetch(`/api/admin/media?id=${encodeURIComponent(activeMediaId)}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.showToast('Đã xóa tệp thành công!', 'success');
+          allMedia = allMedia.filter(m => m.id !== activeMediaId);
+          selectedIds.delete(activeMediaId);
+          closeDetailPanel();
+          renderGrid();
+          updateTotalStats();
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Không thể xóa'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+      }
+    }
+
+    // Delete bulk media
+    async function deleteSelectedMedia() {
+      const ids = Array.from(selectedIds);
+      if (ids.length === 0) return;
+
+      if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${ids.length} tệp đã chọn không?`)) return;
+
+      try {
+        const res = await fetch('/api/admin/media', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids })
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.showToast(`Đã xóa thành công ${ids.length} tệp!`, 'success');
+          allMedia = allMedia.filter(m => !ids.includes(m.id));
+          selectedIds.clear();
+          updateBulkToolbar();
+          if (activeMediaId && ids.includes(activeMediaId)) closeDetailPanel();
+          renderGrid();
+          updateTotalStats();
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Không thể xóa'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+      }
+    }
+
+    // Update Header Counts & Stats
+    function updateTotalStats() {
+      const count = allMedia.length;
+      const totalBytes = allMedia.reduce((acc, m) => acc + (m.size_bytes || 0), 0);
+      const mb = (totalBytes / (1024 * 1024)).toFixed(1);
+
+      document.getElementById('header-total-count').innerText = count;
+      document.getElementById('header-total-mb').innerText = mb;
+      document.getElementById('tab-count-all').innerText = count;
+    }
+
+    // Filters & Search Event Handlers
+    function handleSearchInput(e) {
+      currentSearch = e.target.value.trim();
+      const clearBtn = document.getElementById('clear-search-btn');
+      clearBtn.style.display = currentSearch ? 'block' : 'none';
+      renderGrid();
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('search-input');
+      input.value = '';
+      currentSearch = '';
+      document.getElementById('clear-search-btn').style.display = 'none';
+      renderGrid();
+    }
+
+    function filterByFolder(folder) {
+      currentFolder = folder;
+      document.querySelectorAll('#folder-tabs button').forEach(btn => {
+        if (btn.dataset.folder === folder) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      renderGrid();
+    }
+
+    function handleSortChange(val) {
+      currentSort = val;
+      renderGrid();
+    }
+
+    // Upload Handler with WebP Compression & Optimistic State
+    async function handleFilesUpload(fileList) {
+      if (!fileList || fileList.length === 0) return;
+      const files = Array.from(fileList);
+
+      window.showToast(`Đang nén WebP & tải lên ${files.length} tệp...`, 'info');
+
+      for (let i = 0; i < files.length; i++) {
+        const origFile = files[i];
+        try {
+          // 1. Client-side WebP compression
+          const compressedFile = await compressToWebP(origFile);
+
+          // 2. Upload via FormData
+          const formData = new FormData();
+          formData.append('file', compressedFile);
+          formData.append('folder', currentFolder || 'uploads');
+
+          const res = await fetch('/api/admin/media', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await res.json();
+          if (data.success && data.data) {
+            const newItem = {
+              id: data.data.id,
+              url: data.data.url,
+              filename: data.data.filename,
+              title: data.data.title || '',
+              alt_text: data.data.title || '',
+              mime_type: 'image/webp',
+              size_bytes: data.data.size_bytes || compressedFile.size,
+              size_kb: Math.round((data.data.size_bytes || compressedFile.size) / 1024),
+              folder: currentFolder || 'uploads',
+              created_at: new Date().toISOString()
+            };
+
+            // Prepend to allMedia
+            allMedia.unshift(newItem);
+            renderGrid();
+            updateTotalStats();
+
+            // Auto-select first uploaded file
+            if (i === 0) {
+              handleCardClick(newItem.id);
+            }
+          }
+        } catch (err) {
+          console.error('File upload failed:', origFile.name, err);
+          window.showToast(`Lỗi khi tải ${origFile.name}`, 'error');
+        }
+      }
+
+      window.showToast('Tải lên và xử lý tệp hoàn tất!', 'success');
+    }
+
+    function handleFileInputChange(e) {
+      handleFilesUpload(e.target.files);
+      e.target.value = ''; // Reset input
+    }
+
+    // Fullscreen Drag & Drop Handling (Anti-flicker Pattern)
+    const overlay = document.getElementById('drag-drop-overlay');
+
+    window.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      dragCounter++;
+      overlay.classList.add('active');
+    });
+
+    window.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        overlay.classList.remove('active');
+      }
+    });
+
+    window.addEventListener('dragover', (e) => {
+      e.preventDefault();
+    });
+
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragCounter = 0;
+      overlay.classList.remove('active');
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleFilesUpload(e.dataTransfer.files);
+      }
+    });
+
+    // Keyboard Shortcuts (Arrow navigation & Escape to close)
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.key === 'Escape') {
+        closeDetailPanel();
+      } else if (e.key === 'ArrowLeft') {
+        navigateMedia(-1);
+      } else if (e.key === 'ArrowRight') {
+        navigateMedia(1);
+      }
+    });
+
+    // Initial render on load
+    function initMediaApp() {
+      renderGrid();
+      if (allMedia.length > 0) {
+        handleCardClick(allMedia[0].id);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initMediaApp);
+    } else {
+      initMediaApp();
+    }
+  </script>
+</AdminLayout>

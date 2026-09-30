@@ -1,0 +1,252 @@
+---
+import StoreLayout from '../layouts/StoreLayout.astro';
+import { getDb } from '../lib/db';
+import { renderMarkdown } from '../lib/helpers';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+const { slug } = Astro.params;
+
+// Clean up incoming path & slug
+const pathname = Astro.url.pathname;
+if (pathname.endsWith('.html')) {
+  const cleanPath = pathname.replace(/\.html$/i, '');
+  if (cleanPath === '/phongthuy' || cleanPath === '/index' || cleanPath === '') {
+    return Astro.redirect('/', 301);
+  }
+  return Astro.redirect(cleanPath, 301);
+}
+
+const rawSlug = slug || '';
+const cleanSlug = rawSlug.replace(/\.html$/i, '').trim();
+
+// Reserved slugs that should not match static pages
+const reserved = ['admin', 'api', 'san-pham', 'kien-thuc', 'tin-tuc', 'phong-thuy', 'favicon.ico', 'favicon.png'];
+if (reserved.includes(cleanSlug)) {
+  if (cleanSlug === 'tin-tuc') return Astro.redirect('/kien-thuc', 301);
+  if (cleanSlug === 'phong-thuy') return Astro.redirect('/san-pham', 301);
+  return new Response(null, { status: 404 });
+}
+
+// Old homepage URL
+if (cleanSlug === 'phongthuy' || cleanSlug === 'index') {
+  return Astro.redirect('/', 301);
+}
+
+// Alias mapping for friendly URL navigation & legacy compatibility
+const aliasMap: Record<string, string> = {
+  'gioi-thieu': 'gioi-thieu-cua-hang-phong-thuy-hoa-moc-lan',
+  'gioi-thieu-cua-hang-phong-thuy-hoa-moc-lan': 'gioi-thieu',
+  'lien-he': 'thong-tin-lien-he',
+  'thong-tin-lien-he': 'lien-he',
+  'giao-nhan': 'chinh-sach-giao-nhan',
+  'chinh-sach-giao-nhan': 'giao-nhan',
+  'hoi-dap': 'cau-hoi-thuong-gap',
+  'faqs': 'cau-hoi-thuong-gap',
+  'cau-hoi-thuong-gap-faqs': 'cau-hoi-thuong-gap',
+  'chinh-sach-bao-hanh-kiem-dinh': 'chinh-sach-va-quy-dinh',
+  'chinh-sach-va-quy-dinh-chung': 'chinh-sach-va-quy-dinh',
+  'bao-mat': 'chinh-sach-bao-mat',
+  'kiem-dinh': 'cam-ket-kiem-dinh'
+};
+
+const lookupSlug = aliasMap[cleanSlug] || cleanSlug;
+let pageDoc = await db.prepare('SELECT * FROM posts WHERE slug = ?').bind(lookupSlug).first<any>();
+
+if (!pageDoc && aliasMap[lookupSlug]) {
+  pageDoc = await db.prepare('SELECT * FROM posts WHERE slug = ?').bind(aliasMap[lookupSlug]).first<any>();
+}
+
+// If it's an article (is_page = 0) accessed at root, redirect to /kien-thuc/:slug
+if (pageDoc && pageDoc.is_page === 0) {
+  return Astro.redirect(`/kien-thuc/${pageDoc.slug}`, 301);
+}
+
+if (!pageDoc) {
+  return Astro.rewrite('/404');
+}
+
+// Increment view count
+db.prepare('UPDATE posts SET views = views + 1 WHERE id = ?').bind(pageDoc.id).run();
+
+// Other static pages for quick navigation
+const otherPages = (await db.prepare('SELECT id, slug, title, category FROM posts WHERE is_page = 1 AND id != ? ORDER BY id ASC').bind(pageDoc.id).all<any>()).results || [];
+
+const isContactPage = pageDoc.slug === 'lien-he' || pageDoc.slug === 'thong-tin-lien-he';
+const isFaqPage = pageDoc.slug === 'cau-hoi-thuong-gap' || pageDoc.slug === 'cau-hoi-thuong-gap-faqs' || pageDoc.slug === 'hoi-dap';
+const isShippingPage = pageDoc.slug === 'giao-nhan' || pageDoc.slug === 'chinh-sach-giao-nhan';
+const renderedHtml = renderMarkdown(pageDoc.content || '');
+---
+
+<StoreLayout 
+  title={pageDoc.seo_title || pageDoc.title}
+  description={pageDoc.seo_description || pageDoc.excerpt}
+  activeNav={isContactPage ? 'contact' : pageDoc.slug === 'gioi-thieu' ? 'about' : isShippingPage ? 'shipping' : isFaqPage ? 'faqs' : 'page'}
+>
+  <div class="container" style="padding: 40px 24px; max-width: 960px;">
+    <!-- BREADCRUMB -->
+    <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 24px;">
+      <a href="/" style="color: var(--text-muted); text-decoration: none;">Trang Chủ</a> / 
+      <span style="color: #fff; font-weight: 600;">{pageDoc.title}</span>
+    </div>
+
+    <article style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 16px; padding: 40px; margin-bottom: 40px;">
+      {pageDoc.category && (
+        <span style="display: inline-block; font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--gold-accent); letter-spacing: 1px; margin-bottom: 12px;">
+          {pageDoc.category}
+        </span>
+      )}
+      <h1 style="font-family: var(--font-heading); font-size: 32px; color: #fff; margin-bottom: 28px; line-height: 1.3;">
+        {pageDoc.title}
+      </h1>
+
+      <div class="prose-content" set:html={renderedHtml} />
+
+      {isContactPage && (
+        <div style="margin-top: 40px; padding-top: 32px; border-top: 1px solid var(--store-border);">
+          <!-- SHOWROOM HIGHLIGHT CARDS -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 32px;">
+            <div style="background: rgba(217, 119, 6, 0.06); border: 1px solid rgba(217, 119, 6, 0.25); border-radius: 12px; padding: 20px;">
+              <div style="font-size: 24px; margin-bottom: 8px;">📍</div>
+              <h4 style="color: var(--gold-accent); font-size: 16px; margin-bottom: 6px;">Địa Chỉ Showroom</h4>
+              <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 12px; line-height: 1.5;">1163 Đường 3 Tháng 2, Phường 6, Quận 11, TP.HCM (Gần ngã tư Tạ Uyên, đối diện bánh Đức Phát)</p>
+              <a href="https://maps.google.com/?q=1163+Duong+3+Thang+2+Phuong+6+Quan+11+TPHCM" target="_blank" rel="noopener noreferrer" style="display: inline-block; font-size: 13px; color: var(--gold-accent); font-weight: 600; text-decoration: none;">
+                Mở Google Maps chỉ đường →
+              </a>
+            </div>
+
+            <div style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 20px;">
+              <div style="font-size: 24px; margin-bottom: 8px;">📞</div>
+              <h4 style="color: #34d399; font-size: 16px; margin-bottom: 6px;">Hotline & Zalo Tư Vấn</h4>
+              <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 12px; line-height: 1.5;"><strong>0909.468.057</strong> - (028) 3501 9991<br/>Tư vấn chọn đá theo cung mệnh & gửi ảnh sản phẩm thực tế.</p>
+              <a href="https://zalo.me/0909468057" target="_blank" rel="noopener noreferrer" style="display: inline-block; font-size: 13px; color: #34d399; font-weight: 600; text-decoration: none;">
+                Chat Zalo với Chuyên Gia →
+              </a>
+            </div>
+
+            <div style="background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 12px; padding: 20px;">
+              <div style="font-size: 24px; margin-bottom: 8px;">⏰</div>
+              <h4 style="color: #60a5fa; font-size: 16px; margin-bottom: 6px;">Thời Gian Mở Cửa</h4>
+              <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 12px; line-height: 1.5;"><strong>09:00 - 21:30</strong> (Thứ Hai - Chủ Nhật)<br/>Mở cửa liên tục cả các ngày lễ tết. Có chỗ đỗ xe máy & ô tô.</p>
+              <span style="font-size: 12px; color: var(--text-dim);">Tuyến xe buýt đi qua: 06, 10, 14, 150</span>
+            </div>
+          </div>
+
+          <!-- GOOGLE MAPS EMBED -->
+          <div style="margin-bottom: 36px;">
+            <h3 style="font-size: 18px; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+              <span>🗺️ Bản Đồ Vị Trí Showroom Hoa Mộc Lan</span>
+            </h3>
+            <div style="border-radius: 12px; overflow: hidden; border: 1px solid var(--store-border); height: 380px; background: #1a1a24;">
+              <iframe 
+                src="https://maps.google.com/maps?q=1163+%C4%90%C6%B0%E1%BB%9Dng+3+Th%C3%A1ng+2+Ph%C6%B0%E1%BB%9Dng+6+Qu%E1%BA%ADn+11+TPHCM&t=&z=16&ie=UTF8&iwloc=&output=embed" 
+                width="100%" 
+                height="100%" 
+                style="border:0;" 
+                allowfullscreen="" 
+                loading="lazy"
+                title="Bản đồ Showroom Phong Thủy Hoa Mộc Lan"
+              ></iframe>
+            </div>
+          </div>
+
+          <!-- CONTACT FORM -->
+          <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--store-border); border-radius: 12px; padding: 28px;">
+            <h3 style="font-size: 20px; color: #fff; margin-bottom: 8px;">Gửi Yêu Cầu Tư Vấn / Đặt Lịch Ghé Showroom</h3>
+            <p style="font-size: 14px; color: var(--text-dim); margin-bottom: 20px;">Để lại thông tin, chuyên gia phong thủy Hoa Mộc Lan sẽ liên hệ hỗ trợ bạn trong vòng 15 phút.</p>
+            
+            <form id="contact-inquiry-form" onsubmit="handleSendInquiry(event)" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div>
+                <label style="display: block; font-size: 13px; color: #e2e8f0; margin-bottom: 6px;">Họ và Tên *</label>
+                <input type="text" name="customer_name" required class="form-control" placeholder="Nguyễn Văn A" />
+              </div>
+              <div>
+                <label style="display: block; font-size: 13px; color: #e2e8f0; margin-bottom: 6px;">Số Điện Thoại / Zalo *</label>
+                <input type="tel" name="phone" required class="form-control" placeholder="0909 xxx xxx" />
+              </div>
+              <div style="grid-column: 1 / -1;">
+                <label style="display: block; font-size: 13px; color: #e2e8f0; margin-bottom: 6px;">Nội Dung Cần Tư Vấn</label>
+                <textarea name="message" rows="3" class="form-control" placeholder="Bạn quan tâm loại đá nào, mệnh gì, hoặc ngày giờ ghé showroom..."></textarea>
+              </div>
+              <div style="grid-column: 1 / -1;">
+                <button type="submit" id="btn-submit-inquiry" class="btn-primary" style="padding: 12px 28px; font-size: 15px;">
+                  <span>Gửi Yêu Cầu Tư Vấn Ngay</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isFaqPage && (
+        <div style="margin-top: 40px; padding: 24px; background: rgba(217, 119, 6, 0.08); border: 1px solid rgba(217, 119, 6, 0.3); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: gap: 16px;">
+          <div>
+            <h4 style="color: var(--gold-accent); margin-bottom: 4px; font-size: 16px;">Bạn cần giải đáp thắc mắc riêng về cung mệnh?</h4>
+            <p style="color: var(--text-muted); font-size: 13px; margin: 0;">Chuyên gia phong thủy Hoa Mộc Lan trực máy 24/7 sẵn sàng tư vấn miễn phí.</p>
+          </div>
+          <a href="tel:0909468057" class="btn-primary" style="white-space: nowrap;">
+            📞 Gọi 0909.468.057
+          </a>
+        </div>
+      )}
+    </article>
+
+    <!-- OTHER STATIC PAGES LINKS -->
+    {otherPages.length > 0 && (
+      <div style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 14px; padding: 24px; margin-bottom: 40px;">
+        <h3 style="font-size: 16px; color: var(--gold-accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">
+          Thông Tin Showroom & Chính Sách Khác
+        </h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+          {otherPages.map((op) => (
+            <a 
+              href={`/${op.slug}`} 
+              style="padding: 12px 16px; background: rgba(255,255,255,0.02); border: 1px solid var(--store-border); border-radius: 8px; color: #fff; text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+              onmouseover="this.style.borderColor='var(--gold-accent)'; this.style.background='rgba(255,255,255,0.05)';"
+              onmouseout="this.style.borderColor='var(--store-border)'; this.style.background='rgba(255,255,255,0.02)';"
+            >
+              <span style="color: var(--gold-accent);">✦</span>
+              <span>{op.title}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+
+  <script is:inline>
+    async function handleSendInquiry(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit-inquiry');
+      btn.disabled = true;
+      btn.innerText = 'Đang gửi thông tin...';
+
+      const formData = new FormData(e.target);
+      const payload = Object.fromEntries(formData.entries());
+
+      try {
+        const res = await fetch('/api/store/inquire', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Cảm ơn bạn! Yêu cầu tư vấn đã được gửi thành công. Chuyên gia Hoa Mộc Lan sẽ liên hệ bạn sớm nhất.');
+          e.target.reset();
+          btn.disabled = false;
+          btn.innerText = 'Gửi Yêu Cầu Tư Vấn Ngay';
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Không thể gửi yêu cầu'));
+          btn.disabled = false;
+          btn.innerText = 'Gửi Yêu Cầu Tư Vấn Ngay';
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+        btn.disabled = false;
+        btn.innerText = 'Gửi Yêu Cầu Tư Vấn Ngay';
+      }
+    }
+  </script>
+</StoreLayout>

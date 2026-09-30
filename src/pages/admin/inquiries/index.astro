@@ -1,0 +1,137 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb } from '../../../lib/db';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+
+const inquiries = (await db.prepare(`
+  SELECT id, customer_name, phone, zalo, product_id, product_name, message, status, notes, created_at
+  FROM inquiries
+  ORDER BY created_at DESC
+`).all<any>()).results || [];
+---
+
+<AdminLayout title="Yêu Cầu Tư Vấn & Đặt Mua" activeNav="inquiries" breadcrumbs={[{ label: 'Yêu Cầu Tư Vấn' }]}>
+  <div class="page-header">
+    <div class="page-title">
+      <h2>Yêu Cầu Tư Vấn & Đặt Mua ({inquiries.length})</h2>
+      <p>Danh sách khách hàng để lại thông tin tư vấn phong thủy, chọn đá hợp mệnh</p>
+    </div>
+  </div>
+
+  <div class="admin-card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Thời Gian</th>
+            <th>Khách Hàng</th>
+            <th>Số Điện Thoại / Zalo</th>
+            <th>Vật Phẩm Quan Tâm</th>
+            <th>Nội Dung Yêu Cầu</th>
+            <th>Trạng Thái Xử Lý</th>
+            <th>Ghi Chú Nội Bộ</th>
+            <th style="text-align: right;">Hành Động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {inquiries.length === 0 ? (
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-dim);">
+                Chưa có yêu cầu tư vấn nào từ khách hàng.
+              </td>
+            </tr>
+          ) : (
+            inquiries.map((inq) => {
+              const cleanPhone = (inq.phone || '').replace(/[^0-9]/g, '');
+              return (
+                <tr id={`inq-row-${inq.id}`}>
+                  <td style="font-size: 12px; color: var(--text-dim); white-space: nowrap;">
+                    {inq.created_at}
+                  </td>
+                  <td>
+                    <strong style="color: #0f172a; font-size: 14px; font-weight: 600;">{inq.customer_name}</strong>
+                  </td>
+                  <td>
+                    <span style="font-family: monospace; color: #2563eb; font-weight: 700;">{inq.phone}</span>
+                  </td>
+                  <td style="max-width: 200px; font-weight: 500; color: #334155;">
+                    {inq.product_name || 'Tư vấn chung'}
+                  </td>
+                  <td style="max-width: 250px; font-size: 13px; color: var(--text-muted); line-height: 1.4;">
+                    {inq.message}
+                  </td>
+                  <td>
+                    <select 
+                      class="form-control" 
+                      style="padding: 6px 10px; font-size: 12px; width: 130px;"
+                      onchange={`updateInquiryStatus('${inq.id}', this.value)`}
+                    >
+                      <option value="new" selected={inq.status === 'new'}>Mới (Chưa gọi)</option>
+                      <option value="contacted" selected={inq.status === 'contacted'}>Đã gọi Zalo</option>
+                      <option value="deposit_paid" selected={inq.status === 'deposit_paid'}>Đã chốt cọc</option>
+                      <option value="completed" selected={inq.status === 'completed'}>Đã giao hàng</option>
+                      <option value="cancelled" selected={inq.status === 'cancelled'}>Khách hủy</option>
+                    </select>
+                  </td>
+                  <td>
+                    <input 
+                      type="text" 
+                      value={inq.notes || ''} 
+                      placeholder="Thêm ghi chú..." 
+                      class="form-control" 
+                      style="padding: 6px 10px; font-size: 12px;"
+                      onblur={`updateInquiryNotes('${inq.id}', this.value)`}
+                    />
+                  </td>
+                  <td style="text-align: right;">
+                    <div class="action-buttons" style="justify-content: flex-end;">
+                      <a href={`https://zalo.me/${cleanPhone}`} target="_blank" class="btn-primary" style="padding: 6px 12px; font-size: 11px;">
+                        💬 Chat Zalo
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script is:inline>
+    async function updateInquiryStatus(id, status) {
+      try {
+        const res = await fetch('/api/admin/inquiries', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status })
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.showToast('Cập nhật trạng thái đơn thành công!', 'success');
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Không thể cập nhật'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+      }
+    }
+
+    async function updateInquiryNotes(id, notes) {
+      try {
+        await fetch('/api/admin/inquiries', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, notes })
+        });
+        window.showToast('Đã lưu ghi chú!', 'success');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  </script>
+</AdminLayout>

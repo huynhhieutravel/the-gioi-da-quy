@@ -1,0 +1,456 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb } from '../../../lib/db';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+const url = new URL(Astro.request.url);
+const search = url.searchParams.get('q') || '';
+const tab = url.searchParams.get('tab') || 'all'; // all, active, inactive
+
+// Status tab counts
+const totalCount = (await db.prepare('SELECT COUNT(*) as count FROM links').first<{ count: number }>())?.count || 0;
+const activeCount = (await db.prepare('SELECT COUNT(*) as count FROM links WHERE is_active = 1').first<{ count: number }>())?.count || 0;
+const inactiveCount = (await db.prepare('SELECT COUNT(*) as count FROM links WHERE is_active = 0').first<{ count: number }>())?.count || 0;
+const totalClicks = (await db.prepare('SELECT SUM(clicks) as sum FROM links').first<{ sum: number }>())?.sum || 0;
+
+let whereClauses: string[] = [];
+const params: any[] = [];
+
+if (tab === 'active') {
+  whereClauses.push('is_active = 1');
+} else if (tab === 'inactive') {
+  whereClauses.push('is_active = 0');
+}
+
+if (search) {
+  whereClauses.push('(slug LIKE ? OR label LIKE ? OR url LIKE ?)');
+  params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+}
+
+const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+const links = (await db.prepare(`
+  SELECT slug, label, url, status_code, target, rel, clicks, is_active, created_at
+  FROM links
+  ${whereSql}
+  ORDER BY clicks DESC, created_at DESC
+`).bind(...params).all<any>()).results || [];
+---
+
+<AdminLayout title="Quản Lý Link Rút Gọn (Link Manager)" activeNav="links" breadcrumbs={[{ label: 'Link Manager' }]}>
+  <div class="page-header">
+    <div class="page-title">
+      <h2>Quản Lý Link Rút Gọn & Chuyển Hướng ({totalCount})</h2>
+      <p>Hệ thống link rút gọn tiếp thị (Zalo, Hotline, Fanpage, Showroom) chuẩn FIT Tour CMS</p>
+    </div>
+    <div class="page-actions">
+      <button type="button" class="btn-primary" onclick="openCreateModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 8v8"></path>
+          <path d="M8 12h8"></path>
+        </svg>
+        <span>+ Tạo Link Mới</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 3 STATS TILES (FIT Tour Standard) -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px;">
+    <!-- Tile 1: Total Links -->
+    <div class="admin-card" style="padding: 18px 22px; display: flex; align-items: center; gap: 16px; margin-bottom: 0;">
+      <div style="width: 48px; height: 48px; border-radius: 12px; background: #eff6ff; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #2563eb; flex-shrink: 0;">
+        🔗
+      </div>
+      <div>
+        <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Tổng Số Link</div>
+        <div style="font-size: 24px; font-weight: 800; color: #0f172a; line-height: 1.2; margin-top: 2px;">{totalCount}</div>
+      </div>
+    </div>
+
+    <!-- Tile 2: Total Clicks -->
+    <div class="admin-card" style="padding: 18px 22px; display: flex; align-items: center; gap: 16px; margin-bottom: 0;">
+      <div style="width: 48px; height: 48px; border-radius: 12px; background: #ecfdf5; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #10b981; flex-shrink: 0;">
+        ⚡
+      </div>
+      <div>
+        <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Tổng Lượt Chuyển Hướng</div>
+        <div style="font-size: 24px; font-weight: 800; color: #059669; line-height: 1.2; margin-top: 2px;">{Number(totalClicks || 0).toLocaleString('vi-VN')}</div>
+      </div>
+    </div>
+
+    <!-- Tile 3: Active Links -->
+    <div class="admin-card" style="padding: 18px 22px; display: flex; align-items: center; gap: 16px; margin-bottom: 0;">
+      <div style="width: 48px; height: 48px; border-radius: 12px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #16a34a; flex-shrink: 0;">
+        🟢
+      </div>
+      <div>
+        <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Đang Hoạt Động</div>
+        <div style="font-size: 24px; font-weight: 800; color: #16a34a; line-height: 1.2; margin-top: 2px;">{activeCount} <span style="font-size: 13px; font-weight: 500; color: #64748b;">/ {totalCount}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS TABS -->
+  <div class="status-tabs">
+    <a href={`/admin/links?tab=all&q=${encodeURIComponent(search)}`} class={`status-tab ${tab === 'all' ? 'active' : ''}`}>
+      <span>Tất cả link</span>
+      <span class="tab-badge">{totalCount}</span>
+    </a>
+    <a href={`/admin/links?tab=active&q=${encodeURIComponent(search)}`} class={`status-tab ${tab === 'active' ? 'active' : ''}`}>
+      <span>Đang hoạt động</span>
+      <span class="tab-badge">{activeCount}</span>
+    </a>
+    <a href={`/admin/links?tab=inactive&q=${encodeURIComponent(search)}`} class={`status-tab ${tab === 'inactive' ? 'active' : ''}`}>
+      <span>Tạm dừng</span>
+      <span class="tab-badge">{inactiveCount}</span>
+    </a>
+  </div>
+
+  <!-- FILTER & SEARCH BAR -->
+  <div class="admin-card" style="padding: 14px 20px; margin-bottom: 16px;">
+    <form method="GET" action="/admin/links" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+      <input type="hidden" name="tab" value={tab} />
+
+      <div style="flex: 2; min-width: 260px; position: relative;">
+        <input 
+          type="text" 
+          name="q" 
+          value={search} 
+          placeholder="Tìm link theo slug, tên nhãn, URL đích..." 
+          class="form-control"
+          style="padding-left: 36px; height: 38px; font-size: 13px;"
+        />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: #94a3b8; pointer-events: none;">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </svg>
+      </div>
+
+      <button type="submit" class="btn-primary" style="padding: 8px 18px; font-size: 13px;">
+        <span>Lọc</span>
+      </button>
+
+      {(search || tab !== 'all') && (
+        <a href="/admin/links" class="btn-secondary" style="padding: 8px 14px; font-size: 13px;">
+          <span>Đặt lại</span>
+        </a>
+      )}
+    </form>
+  </div>
+
+  <!-- LINKS TABLE -->
+  <div class="admin-card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th style="width: 50px; text-align: center;">STT</th>
+            <th style="min-width: 220px;">Đường Dẫn Rút Gọn (Short URL)</th>
+            <th>Tên Nhãn / Chiến Dịch</th>
+            <th style="min-width: 260px;">URL Đích Chuyển Hướng</th>
+            <th style="text-align: center;">Lượt Click</th>
+            <th style="text-align: center;">Mã HTTP</th>
+            <th style="text-align: center;">Trạng Thái</th>
+            <th style="text-align: right; width: 140px;">Thao Tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {links.length === 0 ? (
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 48px; color: #64748b;">
+                Chưa có link rút gọn nào phù hợp. Hãy bấm "Tạo Link Mới" để bắt đầu!
+              </td>
+            </tr>
+          ) : (
+            links.map((l, idx) => (
+              <tr id={`link-row-${l.slug}`}>
+                <td style="text-align: center; color: #94a3b8; font-weight: 500;">{idx + 1}</td>
+                <td>
+                  <div>
+                    <!-- Clickable Badge that copies URL instantly -->
+                    <button 
+                      type="button" 
+                      class="short-url-pill" 
+                      onclick={`copyShortLink('${l.slug}')`}
+                      title="Nhấp để sao chép link"
+                    >
+                      <span>/{l.slug}</span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                      </svg>
+                    </button>
+
+                    <!-- WordPress / FIT Tour Style Hover Quick Actions -->
+                    <div class="row-quick-actions">
+                      <button type="button" class="row-action-link" onclick={`openEditModal(${JSON.stringify(l).replace(/"/g, '&quot;')})`}>Sửa</button>
+                      <span class="row-action-sep">•</span>
+                      <a href={`/${l.slug}`} target="_blank" class="row-action-link">Mở link ↗</a>
+                      <span class="row-action-sep">•</span>
+                      <button type="button" class="row-action-link" onclick={`copyShortLink('${l.slug}')`}>Sao chép</button>
+                      <span class="row-action-sep">•</span>
+                      <button type="button" class="row-action-link danger" onclick={`deleteLink('${l.slug}')`}>Xóa</button>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <strong style="color: #0f172a; font-size: 14px; font-weight: 600;">{l.label}</strong>
+                </td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 6px; max-width: 320px;">
+                    <span style="font-size: 12px; color: #475569; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title={l.url}>
+                      {l.url}
+                    </span>
+                    <a href={l.url} target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: none; flex-shrink: 0;" title="Mở link đích trực tiếp">
+                      ↗
+                    </a>
+                  </div>
+                </td>
+                <td style="text-align: center;">
+                  <span class="badge badge-damenh" style="font-size: 13px; font-weight: 700;">
+                    {l.clicks || 0}
+                  </span>
+                </td>
+                <td style="text-align: center;">
+                  <span style="font-size: 11px; font-family: monospace; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #b45309; font-weight: 700; border: 1px solid #fde68a;">
+                    {l.status_code || 302}
+                  </span>
+                </td>
+                <td style="text-align: center;">
+                  <button 
+                    type="button" 
+                    class={`badge badge-interactive ${l.is_active === 1 ? 'badge-stock-in' : 'badge-stock-out'}`}
+                    style="border: none; cursor: pointer;"
+                    onclick={`toggleActive('${l.slug}', ${l.is_active})`}
+                    title="Bấm để bật / tắt chuyển hướng"
+                  >
+                    {l.is_active === 1 ? 'Hoạt động' : 'Tạm dừng'}
+                  </button>
+                </td>
+                <td style="text-align: right;">
+                  <div class="action-buttons" style="justify-content: flex-end;">
+                    <button 
+                      type="button" 
+                      class="btn-icon" 
+                      title="Sao chép link"
+                      onclick={`copyShortLink('${l.slug}')`}
+                    >
+                      📋
+                    </button>
+                    <button 
+                      type="button" 
+                      class="btn-icon" 
+                      title="Chỉnh sửa link"
+                      onclick={`openEditModal(${JSON.stringify(l).replace(/"/g, '&quot;')})`}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+                      </svg>
+                    </button>
+                    <button 
+                      type="button" 
+                      class="btn-icon delete" 
+                      title="Xóa link"
+                      onclick={`deleteLink('${l.slug}')`}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MODAL CREATE / EDIT LINK (FIT Tour Light Theme Dialog) -->
+  <dialog id="link-modal" class="quick-view-dialog" style="max-width: 540px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); padding: 0;">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #e2e8f0;">
+      <h3 id="modal-title" style="color: #0f172a; font-size: 16px; font-weight: 700; margin: 0;">Tạo Link Rút Gọn Mới</h3>
+      <button type="button" class="btn-icon" style="width: 28px; height: 28px;" onclick="closeModal()">✕</button>
+    </div>
+
+    <div style="padding: 24px;">
+      <form id="link-form" onsubmit="handleSaveLink(event)">
+        <input type="hidden" id="form-mode" value="create" />
+
+        <div class="form-group">
+          <label for="form-slug" style="color: #0f172a; font-weight: 600; font-size: 13px;">Đường Dẫn Rút Gọn (Slug) <span style="color: #dc2626;">*</span></label>
+          <div style="display: flex; align-items: center; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; margin-top: 4px;">
+            <span style="padding: 9px 12px; background: #f1f5f9; color: #64748b; font-size: 13px; font-family: monospace; border-right: 1px solid #cbd5e1; font-weight: 600;">
+              thegioidaquy.net/
+            </span>
+            <input 
+              type="text" 
+              id="form-slug" 
+              required 
+              class="form-control" 
+              placeholder="zalo-tuvan" 
+              style="border: none; background: transparent; font-family: monospace; font-size: 13px; height: 38px;"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="form-label" style="color: #0f172a; font-weight: 600; font-size: 13px;">Tên Nhãn / Chiến Dịch <span style="color: #dc2626;">*</span></label>
+          <input type="text" id="form-label" required class="form-control" placeholder="VD: Zalo Tư Vấn Phong Thủy" style="margin-top: 4px;" />
+        </div>
+
+        <div class="form-group">
+          <label for="form-url" style="color: #0f172a; font-weight: 600; font-size: 13px;">URL Đích Chuyển Hướng <span style="color: #dc2626;">*</span></label>
+          <input type="text" id="form-url" required class="form-control" placeholder="https://zalo.me/0909468057 hoặc tel:0909468057" style="margin-top: 4px;" />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="form-status-code" style="color: #0f172a; font-weight: 600; font-size: 13px;">Mã Chuyển Hướng HTTP</label>
+            <select id="form-status-code" class="form-control" style="margin-top: 4px;">
+              <option value="302" selected>302 - Tạm thời (Khuyên dùng)</option>
+              <option value="301">301 - Vĩnh viễn (SEO redirect)</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="form-is-active" style="color: #0f172a; font-weight: 600; font-size: 13px;">Trạng Thái Kích Hoạt</label>
+            <select id="form-is-active" class="form-control" style="margin-top: 4px;">
+              <option value="1" selected>🟢 Hoạt động</option>
+              <option value="0">⚪ Tạm dừng</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+          <button type="button" class="btn-secondary" onclick="closeModal()">Hủy Bỏ</button>
+          <button type="submit" class="btn-primary" id="btn-save-link">
+            <span>Lưu Thông Tin</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <script is:inline>
+    function copyShortLink(slug) {
+      const fullUrl = `${window.location.origin}/${slug}`;
+      navigator.clipboard.writeText(fullUrl).then(() => {
+        window.showToast('Đã sao chép link rút gọn: ' + fullUrl, 'success');
+      }).catch(() => {
+        prompt('Copy link:', fullUrl);
+      });
+    }
+
+    function openCreateModal() {
+      document.getElementById('modal-title').innerText = 'Tạo Link Rút Gọn Mới';
+      document.getElementById('form-mode').value = 'create';
+      document.getElementById('form-slug').value = '';
+      document.getElementById('form-slug').readOnly = false;
+      document.getElementById('form-label').value = '';
+      document.getElementById('form-url').value = '';
+      document.getElementById('form-status-code').value = '302';
+      document.getElementById('form-is-active').value = '1';
+
+      document.getElementById('link-modal').showModal();
+    }
+
+    function openEditModal(link) {
+      document.getElementById('modal-title').innerText = `Chỉnh Sửa Link: /${link.slug}`;
+      document.getElementById('form-mode').value = 'edit';
+      document.getElementById('form-slug').value = link.slug;
+      document.getElementById('form-slug').readOnly = true;
+      document.getElementById('form-label').value = link.label || '';
+      document.getElementById('form-url').value = link.url || '';
+      document.getElementById('form-status-code').value = String(link.status_code || 302);
+      document.getElementById('form-is-active').value = String(link.is_active ?? 1);
+
+      document.getElementById('link-modal').showModal();
+    }
+
+    function closeModal() {
+      document.getElementById('link-modal').close();
+    }
+
+    async function handleSaveLink(e) {
+      e.preventDefault();
+      const mode = document.getElementById('form-mode').value;
+      const slug = document.getElementById('form-slug').value.trim();
+      const label = document.getElementById('form-label').value.trim();
+      const url = document.getElementById('form-url').value.trim();
+      const status_code = parseInt(document.getElementById('form-status-code').value, 10);
+      const is_active = parseInt(document.getElementById('form-is-active').value, 10);
+
+      const btn = document.getElementById('btn-save-link');
+      btn.disabled = true;
+      btn.innerText = 'Đang lưu...';
+
+      try {
+        const method = mode === 'create' ? 'POST' : 'PUT';
+        const res = await fetch('/api/admin/links', {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, label, url, status_code, is_active })
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.showToast(mode === 'create' ? 'Tạo link thành công!' : 'Cập nhật link thành công!', 'success');
+          setTimeout(() => window.location.reload(), 500);
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Không thể lưu link'));
+          btn.disabled = false;
+          btn.innerText = 'Lưu Thông Tin';
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+        btn.disabled = false;
+        btn.innerText = 'Lưu Thông Tin';
+      }
+    }
+
+    async function toggleActive(slug, currentActive) {
+      try {
+        const nextActive = currentActive === 1 ? 0 : 1;
+        const res = await fetch('/api/admin/links', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, is_active: nextActive })
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.showToast('Đã đổi trạng thái link!', 'success');
+          setTimeout(() => window.location.reload(), 400);
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Không thể cập nhật'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+      }
+    }
+
+    async function deleteLink(slug) {
+      if (!confirm(`Bạn có chắc chắn muốn xóa link "/${slug}" không?`)) return;
+
+      try {
+        const res = await fetch(`/api/admin/links?slug=${encodeURIComponent(slug)}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.showToast('Đã xóa link!', 'success');
+          const row = document.getElementById(`link-row-${slug}`);
+          if (row) row.remove();
+        } else {
+          alert('Lỗi: ' + (data.error?.message || 'Không thể xóa'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+      }
+    }
+  </script>
+</AdminLayout>

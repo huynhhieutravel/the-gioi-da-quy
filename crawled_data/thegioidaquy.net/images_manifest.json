@@ -1,0 +1,814 @@
+[
+  {
+    "filename": "Ban-mat-Quat-phong-thuy-da-ngoc-bich-5-new.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Ban-mat-Quat-phong-thuy-da-ngoc-bich-5-new.JPG",
+    "size_bytes": 293397,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Ban-phat-ban-menh-Nhu-Lai-Dai-Nhat-thach-anh-toc-vang-3.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Ban-phat-ban-menh-Nhu-Lai-Dai-Nhat-thach-anh-toc-vang-3.JPG",
+    "size_bytes": 269907,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Da-Garnet-do-mai-giac-5.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Da-Garnet-do-mai-giac-5.JPG",
+    "size_bytes": 328323,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Da-ruby-sao-4.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Da-ruby-sao-4.JPG",
+    "size_bytes": 334659,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Dau-Rong-da-mat-ho-vang-6.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Dau-Rong-da-mat-ho-vang-6.JPG",
+    "size_bytes": 315458,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Doi-uyen-uong-thach-anh-hong-nho-0.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Doi-uyen-uong-thach-anh-hong-nho-0.JPG",
+    "size_bytes": 242818,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Go-hoa-thach-go-hoa-da-ban-gia-re-6.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Go-hoa-thach-go-hoa-da-ban-gia-re-6.JPG",
+    "size_bytes": 333557,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Ho-ly-da-ngoc-bich-6.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Ho-ly-da-ngoc-bich-6.JPG",
+    "size_bytes": 284884,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Lac-tay-da-Lapis-lazuli-10-ly-2.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Lac-tay-da-Lapis-lazuli-10-ly-2.JPG",
+    "size_bytes": 248044,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Mai-Hoa-Kim-Tien-0.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Mai-Hoa-Kim-Tien-0.JPG",
+    "size_bytes": 420920,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Mat-Quan-Am-Dong-Tu-Chalcedony-do-day-5.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Mat-Quan-Am-Dong-Tu-Chalcedony-do-day-5.JPG",
+    "size_bytes": 360186,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Mat-Quan-Cong-dai-giap-da-Obsidian-1.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Mat-Quan-Cong-dai-giap-da-Obsidian-1.JPG",
+    "size_bytes": 262752,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Mat-Quan-Cong-doc-sach-da-Obsidian-0.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Mat-Quan-Cong-doc-sach-da-Obsidian-0.JPG",
+    "size_bytes": 251685,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Nhan-Mau-Don-cam-thach-xanh-1.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Nhan-Mau-Don-cam-thach-xanh-1.JPG",
+    "size_bytes": 226257,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Nhen-phong-thuy-da-ngoc-bich-5.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Nhen-phong-thuy-da-ngoc-bich-5.JPG",
+    "size_bytes": 323259,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-Bat-Dong-Minh-Vuong-da-Serpentine-6.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-Bat-Dong-Minh-Vuong-da-Serpentine-6.JPG",
+    "size_bytes": 244153,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-Bat-Dong-Minh-Vuong-nho-Obsidian-4.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-Bat-Dong-Minh-Vuong-nho-Obsidian-4.JPG",
+    "size_bytes": 443000,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-Dai-The-Chi-da-Serpentine-8.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-Dai-The-Chi-da-Serpentine-8.JPG",
+    "size_bytes": 381484,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-Hu-Khong-Tang-da-Serpentine-2.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-Hu-Khong-Tang-da-Serpentine-2.JPG",
+    "size_bytes": 385881,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-Hu-Khong-Tang-da-ma-nao-7.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-Hu-Khong-Tang-da-ma-nao-7.JPG",
+    "size_bytes": 264917,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-Hu-Khong-Tang-da-thach-anh-trang-1.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-Hu-Khong-Tang-da-thach-anh-trang-1.JPG",
+    "size_bytes": 249179,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-Nhu-Lai-Dai-Nhat-da-Serpentine-5.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-Nhu-Lai-Dai-Nhat-da-Serpentine-5.JPG",
+    "size_bytes": 242616,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-Nhu-Lai-Dai-Nhat-da-ma-nao-do-9.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-Nhu-Lai-Dai-Nhat-da-ma-nao-do-9.JPG",
+    "size_bytes": 274485,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-Pho-Hien-da-Serpentine-2.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-Pho-Hien-da-Serpentine-2.JPG",
+    "size_bytes": 388640,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-Pho-Hien-nho-Obsidian-0.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-Pho-Hien-nho-Obsidian-0.JPG",
+    "size_bytes": 417350,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-Quan-Am-nghin-tay-da-mat-ho-Cho-ban-Phat-ban-menh-dung-goc-phat-giao-4.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-Quan-Am-nghin-tay-da-mat-ho-Cho-ban-Phat-ban-menh-dung-goc-phat-giao-4.JPG",
+    "size_bytes": 266726,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-Thien-Thu-nho-Obsidian-4.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-Thien-Thu-nho-Obsidian-4.JPG",
+    "size_bytes": 16205,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-tuoi-Hoi-A-Di-Da-da-mat-ho-Cho-ban-A-Di-Da-phat-dung-goc-3.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-tuoi-Hoi-A-Di-Da-da-mat-ho-Cho-ban-A-Di-Da-phat-dung-goc-3.JPG",
+    "size_bytes": 322574,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-tuoi-Mui-phat-Nhu-Lai-Dai-Nhat-da-mat-ho-1.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-tuoi-Mui-phat-Nhu-Lai-Dai-Nhat-da-mat-ho-1.JPG",
+    "size_bytes": 333066,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-tuoi-Suu-phat-Hu-Khong-Tang-da-mat-ho-4.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-tuoi-Suu-phat-Hu-Khong-Tang-da-mat-ho-4.JPG",
+    "size_bytes": 350312,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phat-ban-menh-tuoi-Than-Nhu-Lai-Dai-Nhat-da-mat-ho-Cho-ban-Dai-nhat-Nhu-Lai-chinh-goc-phat-giao-4.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phat-ban-menh-tuoi-Than-Nhu-Lai-Dai-Nhat-da-mat-ho-Cho-ban-Dai-nhat-Nhu-Lai-chinh-goc-phat-giao-4.JPG",
+    "size_bytes": 466994,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Phong-Linh-sau-thanh-trang-0.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Phong-Linh-sau-thanh-trang-0.JPG",
+    "size_bytes": 358755,
+    "dimensions": "601x800"
+  },
+  {
+    "filename": "Qua-cau-da-thach-anh-tim-dam-85-2.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Qua-cau-da-thach-anh-tim-dam-85-2.JPG",
+    "size_bytes": 249361,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Quan-Am-cuoi-Rong-da-ngoc-bich-A-2.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Quan-Am-cuoi-Rong-da-ngoc-bich-A-2.JPG",
+    "size_bytes": 60158,
+    "dimensions": "600x449"
+  },
+  {
+    "filename": "Quan-Cong-cam-Dao-cuoi-ngua-da-ruby-do-thien-nhien-299ct-2.jpg",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Quan-Cong-cam-Dao-cuoi-ngua-da-ruby-do-thien-nhien-299ct-2.jpg",
+    "size_bytes": 357291,
+    "dimensions": "600x800"
+  },
+  {
+    "filename": "Thap-da-thach-anh-trang-kim-tu-thap-.-2.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Thap-da-thach-anh-trang-kim-tu-thap-.-2.JPG",
+    "size_bytes": 68845,
+    "dimensions": "640x480"
+  },
+  {
+    "filename": "Ty-huu-chiec-la-da-mat-ho-4.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Ty-huu-chiec-la-da-mat-ho-4.JPG",
+    "size_bytes": 381809,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Ty-huu-da-thach-anh-khoi-dam-70-3.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Ty-huu-da-thach-anh-khoi-dam-70-3.JPG",
+    "size_bytes": 272338,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Vong-da-thach-anh-tim-10-ly-3.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Vong-da-thach-anh-tim-10-ly-3.JPG",
+    "size_bytes": 359964,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Vong-tay-da-Tourmaline-8-ly-2.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Vong-tay-da-Tourmaline-8-ly-2.JPG",
+    "size_bytes": 257039,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Vong-tay-da-ngoc-bich-10-ly-3.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Vong-tay-da-ngoc-bich-10-ly-3.JPG",
+    "size_bytes": 58968,
+    "dimensions": "600x449"
+  },
+  {
+    "filename": "Vong-tay-da-tourmaline-9-ly-6.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Vong-tay-da-tourmaline-9-ly-6.JPG",
+    "size_bytes": 270904,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Vong-tay-day-rut-6-ly-Hoa-Mau-Don-thach-anh-tim-0.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Vong-tay-day-rut-6-ly-Hoa-Mau-Don-thach-anh-tim-0.JPG",
+    "size_bytes": 249578,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Vong-tay-go-hoa-ngoc-do-10-ly--0.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Vong-tay-go-hoa-ngoc-do-10-ly--0.JPG",
+    "size_bytes": 259874,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Vong-tay-thach-anh-den-10-ly-1.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Vong-tay-thach-anh-den-10-ly-1.JPG",
+    "size_bytes": 249536,
+    "dimensions": "700x525"
+  },
+  {
+    "filename": "Vong-tay-thach-anh-toc-xanh-dam-8-ly-0.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Vong-tay-thach-anh-toc-xanh-dam-8-ly-0.JPG",
+    "size_bytes": 49190,
+    "dimensions": "600x449"
+  },
+  {
+    "filename": "Vong-tay-ty-huu-da-mat-ho-10-ly-0.JPG",
+    "category": "original",
+    "local_path": "downloaded_images/products/original/Vong-tay-ty-huu-da-mat-ho-10-ly-0.JPG",
+    "size_bytes": 66799,
+    "dimensions": "640x480"
+  },
+  {
+    "filename": "Ban-mat-Quat-phong-thuy-da-ngoc-bich-5-new-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Ban-mat-Quat-phong-thuy-da-ngoc-bich-5-new-small.JPG",
+    "size_bytes": 21879,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Ban-phat-ban-menh-Nhu-Lai-Dai-Nhat-thach-anh-toc-vang-3-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Ban-phat-ban-menh-Nhu-Lai-Dai-Nhat-thach-anh-toc-vang-3-small.JPG",
+    "size_bytes": 18464,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Da-Garnet-do-mai-giac-5-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Da-Garnet-do-mai-giac-5-small.JPG",
+    "size_bytes": 24302,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Da-ruby-sao-4-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Da-ruby-sao-4-small.JPG",
+    "size_bytes": 25892,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Dau-Rong-da-mat-ho-vang-6-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Dau-Rong-da-mat-ho-vang-6-small.JPG",
+    "size_bytes": 24368,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Doi-uyen-uong-thach-anh-hong-nho-0-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Doi-uyen-uong-thach-anh-hong-nho-0-small.JPG",
+    "size_bytes": 16015,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Go-hoa-thach-go-hoa-da-ban-gia-re-6-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Go-hoa-thach-go-hoa-da-ban-gia-re-6-small.JPG",
+    "size_bytes": 23978,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Ho-ly-da-ngoc-bich-6-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Ho-ly-da-ngoc-bich-6-small.JPG",
+    "size_bytes": 21117,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Lac-tay-da-Lapis-lazuli-10-ly-2-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Lac-tay-da-Lapis-lazuli-10-ly-2-small.JPG",
+    "size_bytes": 18606,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Mai-Hoa-Kim-Tien-0-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Mai-Hoa-Kim-Tien-0-small.JPG",
+    "size_bytes": 25955,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Mat-Quan-Am-Dong-Tu-Chalcedony-do-day-5-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Mat-Quan-Am-Dong-Tu-Chalcedony-do-day-5-small.JPG",
+    "size_bytes": 22469,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Mat-Quan-Cong-dai-giap-da-Obsidian-1-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Mat-Quan-Cong-dai-giap-da-Obsidian-1-small.JPG",
+    "size_bytes": 18692,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Mat-Quan-Cong-doc-sach-da-Obsidian-0-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Mat-Quan-Cong-doc-sach-da-Obsidian-0-small.JPG",
+    "size_bytes": 17339,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Nhan-Mau-Don-cam-thach-xanh-1-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Nhan-Mau-Don-cam-thach-xanh-1-small.JPG",
+    "size_bytes": 14043,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Nhen-phong-thuy-da-ngoc-bich-5-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Nhen-phong-thuy-da-ngoc-bich-5-small.JPG",
+    "size_bytes": 23366,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-Bat-Dong-Minh-Vuong-da-Serpentine-6-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-Bat-Dong-Minh-Vuong-da-Serpentine-6-small.JPG",
+    "size_bytes": 17326,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-Bat-Dong-Minh-Vuong-nho-Obsidian-4-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-Bat-Dong-Minh-Vuong-nho-Obsidian-4-small.JPG",
+    "size_bytes": 30591,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-Dai-The-Chi-da-Serpentine-8-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-Dai-The-Chi-da-Serpentine-8-small.JPG",
+    "size_bytes": 26020,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-Hu-Khong-Tang-da-Serpentine-2-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-Hu-Khong-Tang-da-Serpentine-2-small.JPG",
+    "size_bytes": 27749,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-Hu-Khong-Tang-da-ma-nao-7-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-Hu-Khong-Tang-da-ma-nao-7-small.JPG",
+    "size_bytes": 18205,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-Hu-Khong-Tang-da-thach-anh-trang-1-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-Hu-Khong-Tang-da-thach-anh-trang-1-small.JPG",
+    "size_bytes": 16650,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-Nhu-Lai-Dai-Nhat-da-Serpentine-5-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-Nhu-Lai-Dai-Nhat-da-Serpentine-5-small.JPG",
+    "size_bytes": 17360,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-Nhu-Lai-Dai-Nhat-da-ma-nao-do-9-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-Nhu-Lai-Dai-Nhat-da-ma-nao-do-9-small.JPG",
+    "size_bytes": 19631,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-Pho-Hien-da-Serpentine-2-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-Pho-Hien-da-Serpentine-2-small.JPG",
+    "size_bytes": 27726,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-Pho-Hien-nho-Obsidian-0-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-Pho-Hien-nho-Obsidian-0-small.JPG",
+    "size_bytes": 29603,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-Quan-Am-nghin-tay-da-mat-ho-Cho-ban-Phat-ban-menh-dung-goc-phat-giao-4-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-Quan-Am-nghin-tay-da-mat-ho-Cho-ban-Phat-ban-menh-dung-goc-phat-giao-4-small.JPG",
+    "size_bytes": 18668,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-Thien-Thu-nho-Obsidian-4-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-Thien-Thu-nho-Obsidian-4-small.JPG",
+    "size_bytes": 31196,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-tuoi-Hoi-A-Di-Da-da-mat-ho-Cho-ban-A-Di-Da-phat-dung-goc-3-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-tuoi-Hoi-A-Di-Da-da-mat-ho-Cho-ban-A-Di-Da-phat-dung-goc-3-small.JPG",
+    "size_bytes": 22961,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-tuoi-Mui-phat-Nhu-Lai-Dai-Nhat-da-mat-ho-1-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-tuoi-Mui-phat-Nhu-Lai-Dai-Nhat-da-mat-ho-1-small.JPG",
+    "size_bytes": 22713,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-tuoi-Suu-phat-Hu-Khong-Tang-da-mat-ho-4-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-tuoi-Suu-phat-Hu-Khong-Tang-da-mat-ho-4-small.JPG",
+    "size_bytes": 26262,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phat-ban-menh-tuoi-Than-Nhu-Lai-Dai-Nhat-da-mat-ho-Cho-ban-Dai-nhat-Nhu-Lai-chinh-goc-phat-giao-4-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phat-ban-menh-tuoi-Than-Nhu-Lai-Dai-Nhat-da-mat-ho-Cho-ban-Dai-nhat-Nhu-Lai-chinh-goc-phat-giao-4-small.JPG",
+    "size_bytes": 32986,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Phong-Linh-sau-thanh-trang-0-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Phong-Linh-sau-thanh-trang-0-small.JPG",
+    "size_bytes": 16244,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Qua-cau-da-thach-anh-tim-dam-85-2-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Qua-cau-da-thach-anh-tim-dam-85-2-small.JPG",
+    "size_bytes": 17488,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Quan-Am-cuoi-Rong-da-ngoc-bich-A-2-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Quan-Am-cuoi-Rong-da-ngoc-bich-A-2-small.JPG",
+    "size_bytes": 20918,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Quan-Cong-cam-Dao-cuoi-ngua-da-ruby-do-thien-nhien-299ct-2-small.jpg",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Quan-Cong-cam-Dao-cuoi-ngua-da-ruby-do-thien-nhien-299ct-2-small.jpg",
+    "size_bytes": 21028,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Thap-da-thach-anh-trang-kim-tu-thap-.-2-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Thap-da-thach-anh-trang-kim-tu-thap-.-2-small.JPG",
+    "size_bytes": 19326,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Ty-huu-chiec-la-da-mat-ho-4-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Ty-huu-chiec-la-da-mat-ho-4-small.JPG",
+    "size_bytes": 29726,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Ty-huu-da-thach-anh-khoi-dam-70-3-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Ty-huu-da-thach-anh-khoi-dam-70-3-small.JPG",
+    "size_bytes": 18952,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Vong-da-thach-anh-tim-10-ly-3-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Vong-da-thach-anh-tim-10-ly-3-small.JPG",
+    "size_bytes": 26329,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Vong-tay-da-Tourmaline-8-ly-2-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Vong-tay-da-Tourmaline-8-ly-2-small.JPG",
+    "size_bytes": 17874,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Vong-tay-da-ngoc-bich-10-ly-3-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Vong-tay-da-ngoc-bich-10-ly-3-small.JPG",
+    "size_bytes": 20599,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Vong-tay-da-tourmaline-9-ly-6-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Vong-tay-da-tourmaline-9-ly-6-small.JPG",
+    "size_bytes": 18937,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Vong-tay-day-rut-6-ly-Hoa-Mau-Don-thach-anh-tim-0-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Vong-tay-day-rut-6-ly-Hoa-Mau-Don-thach-anh-tim-0-small.JPG",
+    "size_bytes": 14909,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Vong-tay-go-hoa-ngoc-do-10-ly--0-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Vong-tay-go-hoa-ngoc-do-10-ly--0-small.JPG",
+    "size_bytes": 17977,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Vong-tay-thach-anh-den-10-ly-1-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Vong-tay-thach-anh-den-10-ly-1-small.JPG",
+    "size_bytes": 16740,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Vong-tay-thach-anh-toc-xanh-dam-8-ly-0-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Vong-tay-thach-anh-toc-xanh-dam-8-ly-0-small.JPG",
+    "size_bytes": 16888,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Vong-tay-ty-huu-da-mat-ho-10-ly-0-small.JPG",
+    "category": "thumbnails",
+    "local_path": "downloaded_images/products/thumbnails/Vong-tay-ty-huu-da-mat-ho-10-ly-0-small.JPG",
+    "size_bytes": 21283,
+    "dimensions": "200x200"
+  },
+  {
+    "filename": "Cach-dat-Tuong-Di-Lac-hop-phong-thuy-0.JPG",
+    "category": "news",
+    "local_path": "downloaded_images/news/Cach-dat-Tuong-Di-Lac-hop-phong-thuy-0.JPG",
+    "size_bytes": 69186,
+    "dimensions": "300x225"
+  },
+  {
+    "filename": "Chinh-Sach-va-Quy-Dinh-Chung-0.jpg",
+    "category": "news",
+    "local_path": "downloaded_images/news/Chinh-Sach-va-Quy-Dinh-Chung-0.jpg",
+    "size_bytes": 45545,
+    "dimensions": "300x220"
+  },
+  {
+    "filename": "Chinh-sach-bao-mat-thong-tin-cua-thegioidaquy.net-0.png",
+    "category": "news",
+    "local_path": "downloaded_images/news/Chinh-sach-bao-mat-thong-tin-cua-thegioidaquy.net-0.png",
+    "size_bytes": 222607,
+    "dimensions": "300x185"
+  },
+  {
+    "filename": "Chon-mau-sac-trang-suc-theo-phong-thuy-0.JPG",
+    "category": "news",
+    "local_path": "downloaded_images/news/Chon-mau-sac-trang-suc-theo-phong-thuy-0.JPG",
+    "size_bytes": 68068,
+    "dimensions": "300x225"
+  },
+  {
+    "filename": "Da-Pyrit-0.JPG",
+    "category": "news",
+    "local_path": "downloaded_images/news/Da-Pyrit-0.JPG",
+    "size_bytes": 74028,
+    "dimensions": "300x225"
+  },
+  {
+    "filename": "Da-Thach-Anh-Hong-0.JPG",
+    "category": "news",
+    "local_path": "downloaded_images/news/Da-Thach-Anh-Hong-0.JPG",
+    "size_bytes": 70507,
+    "dimensions": "300x225"
+  },
+  {
+    "filename": "Da-quy-Lapis-lazuli-0.JPG",
+    "category": "news",
+    "local_path": "downloaded_images/news/Da-quy-Lapis-lazuli-0.JPG",
+    "size_bytes": 17159,
+    "dimensions": "200x267"
+  },
+  {
+    "filename": "Deo-nhan-ngon-giua-de-giu-tien--0.JPG",
+    "category": "news",
+    "local_path": "downloaded_images/news/Deo-nhan-ngon-giua-de-giu-tien--0.JPG",
+    "size_bytes": 76477,
+    "dimensions": "300x225"
+  },
+  {
+    "filename": "Hinh-thuc-thanh-toan-0.jpg",
+    "category": "news",
+    "local_path": "downloaded_images/news/Hinh-thuc-thanh-toan-0.jpg",
+    "size_bytes": 45545,
+    "dimensions": "300x220"
+  },
+  {
+    "filename": "Mua-hang_-thanh-toan-va-chinh-sach-bao-hanh-0.JPG",
+    "category": "news",
+    "local_path": "downloaded_images/news/Mua-hang_-thanh-toan-va-chinh-sach-bao-hanh-0.JPG",
+    "size_bytes": 95443,
+    "dimensions": "300x225"
+  },
+  {
+    "filename": "Phat-Di-Lac-0.JPG",
+    "category": "news",
+    "local_path": "downloaded_images/news/Phat-Di-Lac-0.JPG",
+    "size_bytes": 71162,
+    "dimensions": "300x225"
+  },
+  {
+    "filename": "Phat-ban-menh-2019-cua-hang-nao-ban-uy-tin-va-khi-dung-co-phai-kieng-cu-0.JPG",
+    "category": "news",
+    "local_path": "downloaded_images/news/Phat-ban-menh-2019-cua-hang-nao-ban-uy-tin-va-khi-dung-co-phai-kieng-cu-0.JPG",
+    "size_bytes": 96760,
+    "dimensions": "300x225"
+  },
+  {
+    "filename": "Tac-dung-cua-3-loai-da-phong-thuy-pho-bien-hien-nay-0.jpg",
+    "category": "news",
+    "local_path": "downloaded_images/news/Tac-dung-cua-3-loai-da-phong-thuy-pho-bien-hien-nay-0.jpg",
+    "size_bytes": 48809,
+    "dimensions": "300x220"
+  },
+  {
+    "filename": "Tai-sao-nen-chon-mua-online-tai-TheGioiDaQuy.Net-0.jpg",
+    "category": "news",
+    "local_path": "downloaded_images/news/Tai-sao-nen-chon-mua-online-tai-TheGioiDaQuy.Net-0.jpg",
+    "size_bytes": 59111,
+    "dimensions": "300x225"
+  },
+  {
+    "filename": "Thach-anh-am-khoi-0.JPG",
+    "category": "news",
+    "local_path": "downloaded_images/news/Thach-anh-am-khoi-0.JPG",
+    "size_bytes": 76323,
+    "dimensions": "300x225"
+  },
+  {
+    "filename": "Truyen-thuyet-Phung-Hoang-0.JPG",
+    "category": "news",
+    "local_path": "downloaded_images/news/Truyen-thuyet-Phung-Hoang-0.JPG",
+    "size_bytes": 82303,
+    "dimensions": "300x225"
+  },
+  {
+    "filename": "Y-nghia-Ho-Ly-trong-phong-thuy-0.JPG",
+    "category": "news",
+    "local_path": "downloaded_images/news/Y-nghia-Ho-Ly-trong-phong-thuy-0.JPG",
+    "size_bytes": 81092,
+    "dimensions": "300x225"
+  },
+  {
+    "filename": "Phongthuy-HoaMocLan-thegioidaquy.jpg",
+    "category": "site_assets",
+    "local_path": "downloaded_images/site_assets/Phongthuy-HoaMocLan-thegioidaquy.jpg",
+    "size_bytes": 55682,
+    "dimensions": "980x200"
+  },
+  {
+    "filename": "cart.png",
+    "category": "site_assets",
+    "local_path": "downloaded_images/site_assets/cart.png",
+    "size_bytes": 1553,
+    "dimensions": "16x16"
+  },
+  {
+    "filename": "folder4.gif",
+    "category": "site_assets",
+    "local_path": "downloaded_images/site_assets/folder4.gif",
+    "size_bytes": 985,
+    "dimensions": "16x11"
+  },
+  {
+    "filename": "icon_print.gif",
+    "category": "site_assets",
+    "local_path": "downloaded_images/site_assets/icon_print.gif",
+    "size_bytes": 490,
+    "dimensions": "55x16"
+  },
+  {
+    "filename": "test.jpg",
+    "category": "site_assets",
+    "local_path": "downloaded_images/site_assets/test.jpg",
+    "size_bytes": 55682,
+    "dimensions": "980x200"
+  }
+]

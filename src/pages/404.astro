@@ -1,0 +1,60 @@
+---
+import StoreLayout from '../layouts/StoreLayout.astro';
+import { getDb } from '../lib/db';
+
+export const prerender = false;
+
+const db = getDb(Astro.locals);
+const settingsRows = (await db.prepare('SELECT key, value FROM settings').all<{ key: string; value: string }>()).results || [];
+const s: Record<string, string> = {};
+for (const r of settingsRows) s[r.key] = r.value;
+const hotline = s.hotline || '0909.468.057';
+---
+
+<StoreLayout title="404 - Không Tìm Thấy Trang" activeNav="none">
+  <div class="container" style="padding: 80px 24px; min-height: 65vh; display: flex; align-items: center; justify-content: center;">
+    <div style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 20px; padding: 48px 36px; max-width: 640px; width: 100%; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
+      <div style="width: 80px; height: 80px; margin: 0 auto 24px; border-radius: 50%; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); display: flex; align-items: center; justify-content: center;">
+        <img src="/favicon.png" alt="Thế Giới Đá Quý" style="width: 48px; height: 48px; object-fit: contain;" />
+      </div>
+
+      <span style="font-size: 14px; font-weight: 700; color: var(--gold-accent); text-transform: uppercase; letter-spacing: 2px;">
+        Lỗi 404 • Không Tìm Thấy Trang
+      </span>
+
+      <h1 style="font-family: var(--font-heading); font-size: 28px; color: #fff; margin: 12px 0 16px; line-height: 1.35;">
+        Trang Quý Khách Yêu Cầu Không Tồn Tại
+      </h1>
+
+      <p style="color: var(--text-muted); font-size: 15px; line-height: 1.7; margin-bottom: 32px;">
+        Đường dẫn Quý khách đang truy cập có thể đã được thay đổi hoặc không tồn tại trong hệ thống. Quý khách vui lòng chọn các liên kết nhanh dưới đây hoặc liên hệ trực tiếp showroom để được hỗ trợ tận tình.
+      </p>
+
+      <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 36px;">
+        <a href="/" class="btn-gold" style="padding: 12px 24px; font-size: 14px;">
+          🏠 Về Trang Chủ
+        </a>
+        <a href="/san-pham" class="btn-secondary" style="padding: 12px 24px; font-size: 14px;">
+          💎 Xem Bộ Sưu Tập Đá Quý
+        </a>
+        <a href={`tel:${hotline}`} class="btn-primary" style="padding: 12px 20px; font-size: 14px; background: #059669;">
+          📞 Hotline: {hotline}
+        </a>
+      </div>
+
+      <div style="border-top: 1px solid var(--store-border); padding-top: 24px; text-align: left;">
+        <h4 style="font-size: 13px; text-transform: uppercase; color: var(--gold-accent); margin-bottom: 12px; font-weight: 700; text-align: center;">
+          Gợi Ý Trang Hữu Ích
+        </h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px;">
+          <a href="/san-pham?cat=Đá+Thạch+Anh" style="color: #cbd5e1; text-decoration: none;">• Đá Thạch Anh Năng Lượng</a>
+          <a href="/san-pham?cat=Đá+Mắt+Hổ" style="color: #cbd5e1; text-decoration: none;">• Đá Mắt Hổ Dũng Khí</a>
+          <a href="/cau-hoi-thuong-gap" style="color: #cbd5e1; text-decoration: none;">• 24 Câu Hỏi Thường Gặp (FAQs)</a>
+          <a href="/giao-nhan" style="color: #cbd5e1; text-decoration: none;">• Chính Sách Giao Hàng COD</a>
+          <a href="/kien-thuc" style="color: #cbd5e1; text-decoration: none;">• Cẩm Nang Kiến Thức Phong Thủy</a>
+          <a href="/lien-he" style="color: #cbd5e1; text-decoration: none;">• Bản Đồ Chỉ Đường Showroom</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</StoreLayout>

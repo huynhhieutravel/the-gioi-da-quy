@@ -1,0 +1,331 @@
+---
+import '../styles/admin.css';
+import '../styles/post-editor.css';
+import { getDb } from '../lib/db';
+
+interface Props {
+  title: string;
+  activeNav?: string;
+  breadcrumbs?: Array<{ label: string; href?: string }>;
+  hideSidebar?: boolean;
+}
+
+const { title, activeNav = 'dashboard', breadcrumbs = [], hideSidebar = false } = Astro.props;
+
+// Fetch live counts for sidebar badges
+const db = getDb(Astro.locals);
+const prodCount = (await db.prepare('SELECT COUNT(*) as count FROM products').first<{ count: number }>())?.count || 0;
+const mediaCount = (await db.prepare('SELECT COUNT(*) as count FROM media').first<{ count: number }>())?.count || 0;
+const inqNewCount = (await db.prepare("SELECT COUNT(*) as count FROM inquiries WHERE status = 'new'").first<{ count: number }>())?.count || 0;
+const postCount = (await db.prepare('SELECT COUNT(*) as count FROM posts WHERE is_page = 0').first<{ count: number }>())?.count || 0;
+const pageCount = (await db.prepare('SELECT COUNT(*) as count FROM posts WHERE is_page = 1').first<{ count: number }>())?.count || 0;
+const catCount = (await db.prepare('SELECT COUNT(*) as count FROM categories').first<{ count: number }>())?.count || 0;
+const linkCount = (await db.prepare('SELECT COUNT(*) as count FROM links').first<{ count: number }>())?.count || 0;
+
+const storeName = (await db.prepare("SELECT value FROM settings WHERE key = 'site_name'").first<{ value: string }>())?.value || 'Thế Giới Đá Quý';
+---
+
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} | {storeName} CMS</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  </head>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <!-- SIDEBAR -->
+      {!hideSidebar && (
+        <aside class="admin-sidebar">
+        <div class="sidebar-header">
+          <div class="logo-gem" style="background: transparent; box-shadow: none;">
+            <img src="/favicon.png" alt="Thế Giới Đá Quý" style="width: 32px; height: 32px; object-fit: contain;" />
+          </div>
+          <div class="logo-text">
+            <h1>Thế Giới Đá Quý</h1>
+            <span>CMS CLOUDFLARE</span>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section-title">Tổng quan</div>
+          <a href="/admin" class={`nav-item ${activeNav === 'dashboard' ? 'active' : ''}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+              <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+              <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+              <rect width="7" height="5" x="3" y="16" rx="1"></rect>
+            </svg>
+            <span>Bảng Điều Khiển</span>
+          </a>
+
+          <div class="nav-section-title">Kho Đá Quý & Sản Phẩm</div>
+          <div class="nav-item-has-flyout">
+            <a href="/admin/products" class={`nav-item ${activeNav === 'products' || activeNav === 'new-product' || activeNav === 'categories' ? 'active' : ''}`}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m7.5 4.27 9 5.15"></path>
+                <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path>
+                <path d="m3.3 7 8.7 5 8.7-5"></path>
+                <path d="M12 22V12"></path>
+              </svg>
+              <span>Sản Phẩm</span>
+              <span class="nav-badge">{prodCount}</span>
+              <span class="nav-arrow-indicator">▶</span>
+            </a>
+            <div class="nav-flyout-menu">
+              <a href="/admin/products" class={`nav-flyout-link ${activeNav === 'products' ? 'active' : ''}`}>Tất Cả Sản Phẩm</a>
+              <a href="/admin/products/new" class={`nav-flyout-link ${activeNav === 'new-product' ? 'active' : ''}`}>Thêm Mới</a>
+              <a href="/admin/categories" class={`nav-flyout-link ${activeNav === 'categories' ? 'active' : ''}`}>Danh Mục Đá ({catCount})</a>
+              <a href="/admin/products?view=tags" class="nav-flyout-link">Thẻ (Tags)</a>
+            </div>
+          </div>
+
+          <div class="nav-section-title">Bài Viết & Kiến Thức</div>
+          <div class="nav-item-has-flyout">
+            <a href="/admin/posts" class={`nav-item ${activeNav === 'posts' || activeNav === 'new-post' ? 'active' : ''}`}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" x2="8" y1="13" y2="13"></line>
+                <line x1="16" x2="8" y1="17" y2="17"></line>
+                <line x1="10" x2="8" y1="9" y2="9"></line>
+              </svg>
+              <span>Posts</span>
+              <span class="nav-badge">{postCount}</span>
+              <span class="nav-arrow-indicator">▶</span>
+            </a>
+            <div class="nav-flyout-menu">
+              <a href="/admin/posts" class={`nav-flyout-link ${activeNav === 'posts' ? 'active' : ''}`}>All Posts</a>
+              <a href="/admin/posts/new" class={`nav-flyout-link ${activeNav === 'new-post' ? 'active' : ''}`}>Add New</a>
+              <a href="/admin/categories" class="nav-flyout-link">Categories</a>
+              <a href="/admin/posts?view=tags" class="nav-flyout-link">Tags</a>
+            </div>
+          </div>
+
+          <div class="nav-section-title">Trang Tĩnh Showroom</div>
+          <div class="nav-item-has-flyout">
+            <a href="/admin/pages" class={`nav-item ${activeNav === 'pages' || activeNav === 'new-page' ? 'active' : ''}`}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                <path d="M3 9h18"></path>
+                <path d="M9 21V9"></path>
+              </svg>
+              <span>Pages</span>
+              <span class="nav-badge">{pageCount}</span>
+              <span class="nav-arrow-indicator">▶</span>
+            </a>
+            <div class="nav-flyout-menu">
+              <a href="/admin/pages" class={`nav-flyout-link ${activeNav === 'pages' ? 'active' : ''}`}>All Pages</a>
+              <a href="/admin/pages/new" class={`nav-flyout-link ${activeNav === 'new-page' ? 'active' : ''}`}>Add New</a>
+            </div>
+          </div>
+
+          <div class="nav-section-title">Khách Hàng & Đơn Tư Vấn</div>
+          <a href="/admin/inquiries" class={`nav-item ${activeNav === 'inquiries' ? 'active' : ''}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+            <span>Yêu Cầu Tư Vấn</span>
+            {inqNewCount > 0 ? (
+              <span class="nav-badge alert">{inqNewCount} mới</span>
+            ) : (
+              <span class="nav-badge">0</span>
+            )}
+          </a>
+
+          <div class="nav-section-title">Thư Viện & Cấu Hình</div>
+          <a href="/admin/media" class={`nav-item ${activeNav === 'media' ? 'active' : ''}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+              <circle cx="9" cy="9" r="2"></circle>
+              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+            </svg>
+            <span>Thư Viện Media</span>
+            <span class="nav-badge">{mediaCount}</span>
+          </a>
+
+          <a href="/admin/links" class={`nav-item ${activeNav === 'links' ? 'active' : ''}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+            <span>Link Manager</span>
+            <span class="nav-badge">{linkCount}</span>
+          </a>
+
+          <a href="/admin/settings" class={`nav-item ${activeNav === 'settings' ? 'active' : ''}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <span>Cài Đặt Showroom</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <a href="/" target="_blank" class="btn-view-site">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" x2="21" y1="14" y2="3"></line>
+            </svg>
+            <span>Xem Website Showroom</span>
+          </a>
+
+          <div class="user-snippet">
+            <div class="user-avatar">AD</div>
+            <div class="user-info">
+              <span class="user-name">Đoàn Quốc Sơn</span>
+              <span class="user-role">Quản Trị Viên</span>
+            </div>
+          </div>
+
+          <button id="collapseBtn" class="btn-collapse-sidebar" type="button" title="Thu gọn / Mở rộng menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+              <path d="m15 18-6-6 6-6"/>
+            </svg>
+            <span class="collapse-text">Thu gọn menu</span>
+          </button>
+        </div>
+      </aside>
+      )}
+
+      <!-- MAIN WRAPPER -->
+      <div class={`admin-main ${hideSidebar ? 'full-width' : ''}`}>
+        {hideSidebar && (
+          <header class="fittour-global-header">
+            <div class="fittour-header-left">
+              <a href="/admin/posts" class="fittour-hamburger-btn" title="Trở về danh sách bài viết">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="3" y1="12" x2="21" y2="12"></line>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+              </a>
+              <div class="fittour-search-box">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" placeholder="Search anything..." />
+                <span class="fittour-search-kbd">⌘K</span>
+              </div>
+            </div>
+
+            <div class="fittour-header-right">
+              <a href="/" target="_blank" class="fittour-btn-website">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                <span>Xem Website</span>
+              </a>
+
+              <div class="fittour-user-pill">
+                <div class="fittour-user-info">
+                  <span class="fittour-user-name">Guest</span>
+                  <span class="fittour-user-role">Admin</span>
+                </div>
+                <div class="fittour-user-avatar">G</div>
+              </div>
+            </div>
+          </header>
+        )}
+        {!hideSidebar && (
+          <header class="admin-topbar">
+            <div class="topbar-left">
+              <button id="topbarHamburger" class="topbar-hamburger" type="button" aria-label="Toggle menu" title="Mở/Thu gọn menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                  <line x1="4" x2="20" y1="12" y2="12"></line>
+                  <line x1="4" x2="20" y1="6" y2="6"></line>
+                  <line x1="4" x2="20" y1="18" y2="18"></line>
+                </svg>
+              </button>
+              <nav class="breadcrumb-list" aria-label="Breadcrumb">
+                <a href="/admin">CMS</a>
+                {breadcrumbs.map((b) => (
+                  <>
+                    <span class="breadcrumb-separator">/</span>
+                    {b.href ? <a href={b.href}>{b.label}</a> : <span class="breadcrumb-current">{b.label}</span>}
+                  </>
+                ))}
+              </nav>
+            </div>
+
+            <div class="topbar-right">
+              <form action="/admin/products" method="GET" class="search-box-top">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.3-4.3"></path>
+                </svg>
+                <input type="text" name="q" placeholder="Tìm sản phẩm, SKU, đá quý..." />
+              </form>
+
+              <a href="/admin/products/new" class="btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>+ Thêm Sản Phẩm</span>
+              </a>
+            </div>
+          </header>
+        )}
+
+        <main class={`admin-content ${hideSidebar ? 'full-width' : ''}`}>
+          <slot />
+        </main>
+      </div>
+    </div>
+
+    <!-- GLOBAL TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script is:inline>
+      // Sidebar Collapse Logic
+      document.addEventListener('DOMContentLoaded', () => {
+        const collapseBtn = document.getElementById('collapseBtn');
+        const hamburgerBtn = document.getElementById('topbarHamburger');
+        const sidebar = document.querySelector('.admin-sidebar');
+        const main = document.querySelector('.admin-main');
+
+        const toggleSidebar = () => {
+          if (!sidebar || !main) return;
+          const isCollapsed = sidebar.classList.toggle('sidebar-collapsed');
+          main.classList.toggle('sidebar-collapsed', isCollapsed);
+          localStorage.setItem('sidebar_collapsed', isCollapsed ? 'true' : 'false');
+        };
+
+        if (localStorage.getItem('sidebar_collapsed') === 'true' && sidebar && main) {
+          sidebar.classList.add('sidebar-collapsed');
+          main.classList.add('sidebar-collapsed');
+        }
+
+        if (collapseBtn) collapseBtn.addEventListener('click', toggleSidebar);
+        if (hamburgerBtn) hamburgerBtn.addEventListener('click', toggleSidebar);
+      });
+
+      window.showToast = function(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+          <span>${type === 'success' ? '✅' : '❌'}</span>
+          <span>${message}</span>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateY(10px)';
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
+      };
+    </script>
+  </body>
+</html>
