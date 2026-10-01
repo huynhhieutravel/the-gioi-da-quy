@@ -90,6 +90,7 @@ const renderedHtml = renderMarkdown(matchedPost.content || '');
 <StoreLayout 
   title={matchedPost.seo_title || matchedPost.title}
   description={matchedPost.seo_description || matchedPost.excerpt}
+  image={matchedPost.thumbnail}
   activeNav="news"
 >
   <div class="container" style="padding: 40px 24px; max-width: 920px;">

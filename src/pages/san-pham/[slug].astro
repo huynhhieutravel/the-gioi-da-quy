@@ -51,6 +51,7 @@ const renderedContent = renderMarkdown(product.content || product.short_descript
 <StoreLayout 
   title={product.seo_title || product.name} 
   description={product.seo_description || product.short_description}
+  image={product.thumbnail}
   activeNav="products"
 >
   <div class="container" style="padding: 40px 24px;">

@@ -6,9 +6,19 @@ interface Props {
   title: string;
   description?: string;
   activeNav?: string;
+  image?: string;
+  canonical?: string;
+  noindex?: boolean;
 }
 
-const { title, description = 'Cửa hàng đá quý phong thủy thiên nhiên Hoa Mộc Lan TP.HCM', activeNav = 'home' } = Astro.props;
+const { 
+  title, 
+  description = 'Cửa hàng đá quý phong thủy thiên nhiên Hoa Mộc Lan TP.HCM - Hơn 15 năm uy tín cung cấp đá quý phong thủy, Phật bản mệnh 12 con giáp, linh vật chiêu tài kiểm định SJC, PNJ.', 
+  activeNav = 'home',
+  image = '/uploads/site_assets/Phongthuy-HoaMocLan-thegioidaquy.jpg',
+  canonical,
+  noindex = false
+} = Astro.props;
 
 const db = getDb(Astro.locals);
 const settingsRows = (await db.prepare('SELECT key, value FROM settings').all<{ key: string; value: string }>()).results || [];
@@ -20,6 +30,10 @@ for (const r of settingsRows) {
 const hotline = settings.hotline || '0909.468.057';
 const address = settings.address || '1163 Đường 3 Tháng 2, P.6, Q.11, TP. HCM';
 const siteName = settings.site_name || 'Thế Giới Đá Quý - Phong Thủy Hoa Mộc Lan';
+
+const cleanPath = Astro.url.pathname.replace(/\/$/, '') || '/';
+const canonicalUrl = canonical || `https://thegioidaquy.net${cleanPath === '/' ? '' : cleanPath}`;
+const ogImage = image.startsWith('http') ? image : `https://thegioidaquy.net${image.startsWith('/') ? '' : '/'}${image}`;
 ---
 
 <!doctype html>
@@ -29,6 +43,32 @@ const siteName = settings.site_name || 'Thế Giới Đá Quý - Phong Thủy Ho
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title} | {siteName}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <!-- Robots Meta Tags: Explicitly allow Google and all search engines -->
+    {noindex ? (
+      <meta name="robots" content="noindex, nofollow" />
+      <meta name="googlebot" content="noindex, nofollow" />
+    ) : (
+      <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+      <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    )}
+
+    <!-- Open Graph / Facebook SEO -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:title" content={`${title} | ${siteName}`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:locale" content="vi_VN" />
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={`${title} | ${siteName}`} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
