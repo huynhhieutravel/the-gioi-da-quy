@@ -7,8 +7,17 @@ export const prerender = false;
 
 const db = getDb(Astro.locals);
 const { slug } = Astro.params;
+const rawSlug = (slug || '').replace(/\.html$/i, '').trim().toLowerCase();
+let product = await db.prepare('SELECT * FROM products WHERE slug = ?').bind(rawSlug).first<any>();
 
-const product = await db.prepare('SELECT * FROM products WHERE slug = ?').bind(slug).first<any>();
+if (!product) {
+  // If slug has trailing numeric ID (e.g. -694), fallback to base slug
+  const baseSlug = rawSlug.replace(/-\d+$/, '');
+  product = await db.prepare('SELECT * FROM products WHERE slug = ?').bind(baseSlug).first<any>();
+  if (product) {
+    return Astro.redirect(`/san-pham/${product.slug}`, 301);
+  }
+}
 
 if (!product) {
   return Astro.rewrite('/404');

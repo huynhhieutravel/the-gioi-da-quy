@@ -11,7 +11,7 @@ const q = url.searchParams.get('q') || '';
 const category = url.searchParams.get('cat') || '';
 const element = url.searchParams.get('el') || '';
 const page = parseInt(url.searchParams.get('page') || '1', 10);
-const pageSize = 12;
+const pageSize = 16;
 const offset = (page - 1) * pageSize;
 
 const whereConditions: string[] = [];

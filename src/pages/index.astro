@@ -11,8 +11,11 @@ const featuredProducts = (await db.prepare(`
   SELECT id, slug, name, sku, price_text, category_name, gemstone_type, feng_shui_element, thumbnail
   FROM products
   WHERE is_featured = 1
-  LIMIT 8
+  LIMIT 12
 `).all<any>()).results || [];
+
+// Total Product Count
+const totalProducts = (await db.prepare('SELECT COUNT(*) as count FROM products').first<{ count: number }>())?.count || 380;
 
 // 2. All Categories
 const categories = (await db.prepare(`
@@ -87,7 +90,7 @@ for (const r of settingsRows) s[r.key] = r.value;
 
       <div style="display: flex; justify-content: center; gap: 16px; margin-top: 24px;">
         <a href="/san-pham" class="btn-gold" style="padding: 12px 28px; font-size: 15px;">
-          Xem Toàn Bộ 47 Vật Phẩm
+          Xem Toàn Bộ {totalProducts} Vật Phẩm
         </a>
         <a href="#ngu-hanh" class="btn-secondary" style="padding: 12px 24px; font-size: 15px;">
           Tra Cứu Đá Theo Mệnh
