@@ -38,9 +38,10 @@ if (tab === 'in_stock') {
 
 // Search filter
 if (q) {
-  whereConditions.push('(name LIKE ? OR sku LIKE ? OR gemstone_type LIKE ?)');
-  const term = `%${q}%`;
-  params.push(term, term, term);
+  const rawTerm = `%${q}%`;
+  const slugTerm = `%${q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, '%')}%`;
+  whereConditions.push('(name LIKE ? OR slug LIKE ? OR sku LIKE ? OR gemstone_type LIKE ?)');
+  params.push(rawTerm, slugTerm, rawTerm, rawTerm);
 }
 
 // Category filter

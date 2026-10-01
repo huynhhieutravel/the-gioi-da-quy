@@ -63,7 +63,7 @@ const renderedContent = renderMarkdown(product.content || product.short_descript
     </div>
 
     <!-- PRODUCT DETAIL GRID -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: flex-start; margin-bottom: 60px;">
+    <div class="product-detail-layout">
       <!-- LEFT: IMAGE GALLERY -->
       <div>
         <div style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 16px; overflow: hidden; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; position: relative;">
@@ -281,3 +281,19 @@ const renderedContent = renderMarkdown(product.content || product.short_descript
     }
   </script>
 </StoreLayout>
+
+<style>
+  .product-detail-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: flex-start;
+    margin-bottom: 60px;
+  }
+  @media (max-width: 860px) {
+    .product-detail-layout {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+  }
+</style>
