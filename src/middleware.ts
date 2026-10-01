@@ -25,7 +25,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // If root or contains slash (sub-paths) or matches reserved system routes, pass through
   if (!pathname || pathname.includes('/') || RESERVED_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(prefix + '/'))) {
-    return next();
+    const response = await next();
+    if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/api')) {
+      const headers = new Headers(response.headers);
+      headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+      });
+    }
+    return response;
   }
 
   try {

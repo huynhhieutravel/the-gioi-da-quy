@@ -11,7 +11,7 @@ for (const r of settingsRows) s[r.key] = r.value;
 const hotline = s.hotline || '0909.468.057';
 ---
 
-<StoreLayout title="404 - Không Tìm Thấy Trang" activeNav="none">
+<StoreLayout title="404 - Không Tìm Thấy Trang" activeNav="none" noindex={true}>
   <div class="container" style="padding: 80px 24px; min-height: 65vh; display: flex; align-items: center; justify-content: center;">
     <div style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 20px; padding: 48px 36px; max-width: 640px; width: 100%; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
       <div style="width: 80px; height: 80px; margin: 0 auto 24px; border-radius: 50%; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); display: flex; align-items: center; justify-content: center;">
