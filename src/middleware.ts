@@ -16,7 +16,8 @@ const RESERVED_PREFIXES = [
   'robots.txt',
   'sitemap.xml',
   'sitemap_index.xml',
-  'wp-sitemap.xml'
+  'wp-sitemap.xml',
+  'llms.txt'
 ];
 
 export const onRequest = defineMiddleware(async (context, next) => {

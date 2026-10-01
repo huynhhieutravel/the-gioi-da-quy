@@ -134,6 +134,8 @@ const productSchema = {
             id="main-product-img" 
             src={product.thumbnail || '/placeholder-gem.jpg'} 
             alt={product.name} 
+            fetchpriority="high"
+            decoding="async"
             style="width: 100%; height: 100%; object-fit: contain; max-height: 520px;" 
           />
           <span class={`product-element-tag ${badgeClass}`} style="top: 16px; left: 16px; font-size: 13px;">
@@ -231,9 +233,9 @@ const productSchema = {
     <!-- FULL DESCRIPTION & FENG SHUI MEANING -->
     <div style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 16px; padding: 36px; margin-bottom: 60px;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--store-border); padding-bottom: 14px; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
-        <h3 style="font-family: var(--font-heading); font-size: 24px; color: #fff; margin: 0;">
+        <h2 style="font-family: var(--font-heading); font-size: 24px; color: #fff; margin: 0;">
           Ý Nghĩa Phong Thủy & Tác Dụng Năng Lượng
-        </h3>
+        </h2>
         <span style="font-size: 13px; color: var(--gold-accent); display: flex; align-items: center; gap: 6px;">
           ✓ Đá Quý Phong Thủy Hoa Mộc Lan - Tự Nhiên 100%
         </span>
@@ -245,9 +247,9 @@ const productSchema = {
     <!-- RELATED PRODUCTS -->
     {relatedProducts.length > 0 && (
       <div>
-        <h3 style="font-family: var(--font-heading); font-size: 22px; color: #fff; margin-bottom: 24px;">
+        <h2 style="font-family: var(--font-heading); font-size: 22px; color: #fff; margin-bottom: 24px;">
           Sản Phẩm Cùng Dòng {product.category_name}
-        </h3>
+        </h2>
         <div class="products-grid">
           {relatedProducts.map((rp) => (
             <div class="product-card">

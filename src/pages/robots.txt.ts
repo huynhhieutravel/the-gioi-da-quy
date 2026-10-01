@@ -34,6 +34,9 @@ Disallow: /api/
 # Sitemaps
 Sitemap: ${domain}/sitemap.xml
 Sitemap: ${domain}/sitemap_index.xml
+
+# LLM & AI Search Context (GEO)
+# Context: ${domain}/llms.txt
 `;
 
   return new Response(content, {
