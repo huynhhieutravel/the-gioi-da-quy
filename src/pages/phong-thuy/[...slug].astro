@@ -10,21 +10,73 @@ if (!rawSlug || rawSlug === 'phongthuy' || rawSlug === 'index') {
   return Astro.redirect('/san-pham', 301);
 }
 
+// 1. Legacy Category / Filter / Pagination Mapping
+const categoryKeywords: Array<{ pattern: RegExp; target: string }> = [
+  { pattern: /thach-anh/i, target: '/san-pham?cat=Đá+Thạch+Anh' },
+  { pattern: /mat-ho|tiger-eye/i, target: '/san-pham?cat=Đá+Mắt+Hổ' },
+  { pattern: /ngoc-bich/i, target: '/san-pham?cat=Đá+Ngọc+Bích' },
+  { pattern: /hac-nga|obsidian/i, target: '/san-pham?cat=Đá+Hắc+Ngà+(Obsidian)' },
+  { pattern: /serpentine/i, target: '/san-pham?cat=Đá+Serpentine' },
+  { pattern: /ruby/i, target: '/san-pham?cat=Đá+Ruby' },
+  { pattern: /ma-nao|agate/i, target: '/san-pham?cat=Đá+Mã+Não' },
+  { pattern: /tourmaline/i, target: '/san-pham?cat=Đá+Tourmaline' },
+  { pattern: /cam-thach|phi-thuy/i, target: '/san-pham?cat=Đá+Cẩm+Thạch+(Ngọc+Phỉ+Thúy)' },
+  { pattern: /go-hoa-thach/i, target: '/san-pham?cat=Gỗ+Hóa+Thạch' },
+  { pattern: /lapis/i, target: '/san-pham?cat=Đá+Lapis+Lazuli' },
+  { pattern: /garnet|granat/i, target: '/san-pham?cat=Đá+Garnet' },
+  { pattern: /chalcedony|chacedol/i, target: '/san-pham?cat=Đá+Chalcedony' },
+  { pattern: /vong-tay/i, target: '/san-pham?cat=Vòng+Tay+Phong+Thủy' },
+  { pattern: /sapphire/i, target: '/san-pham?cat=Đá+Sapphire' },
+  { pattern: /mat-meo/i, target: '/san-pham?q=mat+meo' },
+  { pattern: /mat-trang/i, target: '/san-pham?q=mat+trang' },
+  { pattern: /rhodonite/i, target: '/san-pham?q=rhodonite' },
+  { pattern: /aquamarin/i, target: '/san-pham?q=aquamarin' },
+  { pattern: /topaz/i, target: '/san-pham?q=topaz' },
+  { pattern: /peridot/i, target: '/san-pham?q=peridot' },
+  { pattern: /spinel/i, target: '/san-pham?q=spinel' },
+  { pattern: /ho-phach/i, target: '/san-pham?q=ho+phach' }
+];
+
+// Check if this is an old category path (e.g. da-phongthuy-116-..., or contains /page/, /attrfilter/)
+if (rawSlug.startsWith('da-phongthuy') || rawSlug.includes('/page/') || rawSlug.includes('/attrfilter/')) {
+  for (const item of categoryKeywords) {
+    if (item.pattern.test(rawSlug)) {
+      return Astro.redirect(item.target, 301);
+    }
+  }
+  return Astro.redirect('/san-pham', 301);
+}
+
 const db = getDb(Astro.locals);
 
-// Try exact match in products
+// 2. Try exact match in products
 let product = await db.prepare('SELECT slug FROM products WHERE slug = ?').bind(rawSlug).first<{ slug: string }>();
 
 if (!product) {
-  // Try stripped numeric ID
+  // Try stripped numeric ID (e.g. mat-di-lac-694 -> mat-di-lac)
   const baseSlug = rawSlug.replace(/-\d+$/, '');
   product = await db.prepare('SELECT slug FROM products WHERE slug = ?').bind(baseSlug).first<{ slug: string }>();
+}
+
+if (!product) {
+  // Try partial match on slug prefix
+  const cleanParts = rawSlug.replace(/-\d+$/, '').split('-').filter(p => p.length > 2).slice(0, 3).join('-');
+  if (cleanParts) {
+    product = await db.prepare('SELECT slug FROM products WHERE slug LIKE ? LIMIT 1').bind(`${cleanParts}%`).first<{ slug: string }>();
+  }
 }
 
 if (product) {
   return Astro.redirect(`/san-pham/${product.slug}`, 301);
 }
 
-// Fallback: redirect to catalog or attempt direct slug
-return Astro.redirect(`/san-pham/${rawSlug}`, 301);
+// 3. Fallback: if keywords match any category, redirect to that category
+for (const item of categoryKeywords) {
+  if (item.pattern.test(rawSlug)) {
+    return Astro.redirect(item.target, 301);
+  }
+}
+
+// 4. Safe fallback: redirect to main catalog (NEVER return broken 404 for legacy links)
+return Astro.redirect('/san-pham', 301);
 ---

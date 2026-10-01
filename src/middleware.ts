@@ -12,8 +12,11 @@ const RESERVED_PREFIXES = [
   'favicon.ico',
   'favicon.png',
   'favicon.svg',
+  'tin-tuc',
   'robots.txt',
-  'sitemap.xml'
+  'sitemap.xml',
+  'sitemap_index.xml',
+  'wp-sitemap.xml'
 ];
 
 export const onRequest = defineMiddleware(async (context, next) => {

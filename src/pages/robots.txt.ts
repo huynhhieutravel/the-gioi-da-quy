@@ -8,8 +8,23 @@ export const GET: APIRoute = async ({ site, url }) => {
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /user/
+Disallow: /wp-admin/
+Disallow: /wp-login.php
+Disallow: /wp-includes/
 
+# Explicit search crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /uploads/
+Allow: /favicon.png
+Allow: /favicon.ico
+
+# Sitemaps
 Sitemap: ${domain}/sitemap.xml
+Sitemap: ${domain}/sitemap_index.xml
 `;
 
   return new Response(content, {

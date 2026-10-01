@@ -29,9 +29,12 @@ if (reserved.includes(cleanSlug)) {
   return new Response(null, { status: 404 });
 }
 
-// Old homepage URL
+// Old homepage and legacy catalog URLs
 if (cleanSlug === 'phongthuy' || cleanSlug === 'index') {
   return Astro.redirect('/', 301);
+}
+if (cleanSlug === 'da-phongthuy' || cleanSlug === 'da-phong-thuy') {
+  return Astro.redirect('/san-pham', 301);
 }
 
 // Alias mapping for friendly URL navigation & legacy compatibility
