@@ -37,29 +37,25 @@ if (cleanSlug === 'da-phongthuy' || cleanSlug === 'da-phong-thuy') {
   return Astro.redirect('/san-pham', 301);
 }
 
-// Alias mapping for friendly URL navigation & legacy compatibility
-const aliasMap: Record<string, string> = {
-  'gioi-thieu': 'gioi-thieu-cua-hang-phong-thuy-hoa-moc-lan',
-  'gioi-thieu-cua-hang-phong-thuy-hoa-moc-lan': 'gioi-thieu',
-  'lien-he': 'thong-tin-lien-he',
-  'thong-tin-lien-he': 'lien-he',
-  'giao-nhan': 'chinh-sach-giao-nhan',
-  'chinh-sach-giao-nhan': 'giao-nhan',
-  'hoi-dap': 'cau-hoi-thuong-gap',
-  'faqs': 'cau-hoi-thuong-gap',
-  'cau-hoi-thuong-gap-faqs': 'cau-hoi-thuong-gap',
-  'chinh-sach-bao-hanh-kiem-dinh': 'chinh-sach-va-quy-dinh',
-  'chinh-sach-va-quy-dinh-chung': 'chinh-sach-va-quy-dinh',
-  'bao-mat': 'chinh-sach-bao-mat',
-  'kiem-dinh': 'cam-ket-kiem-dinh'
+// 301 Redirect secondary aliases to primary canonical URLs to eliminate duplicate content
+const aliasRedirects: Record<string, string> = {
+  'chinh-sach-giao-nhan': '/giao-nhan',
+  'thong-tin-lien-he': '/lien-he',
+  'gioi-thieu-cua-hang-phong-thuy-hoa-moc-lan': '/gioi-thieu',
+  'hoi-dap': '/cau-hoi-thuong-gap',
+  'faqs': '/cau-hoi-thuong-gap',
+  'cau-hoi-thuong-gap-faqs': '/cau-hoi-thuong-gap',
+  'chinh-sach-bao-hanh-kiem-dinh': '/chinh-sach-va-quy-dinh',
+  'chinh-sach-va-quy-dinh-chung': '/chinh-sach-va-quy-dinh',
+  'bao-mat': '/chinh-sach-bao-mat',
+  'kiem-dinh': '/cam-ket-kiem-dinh'
 };
 
-const lookupSlug = aliasMap[cleanSlug] || cleanSlug;
-let pageDoc = await db.prepare('SELECT * FROM posts WHERE slug = ?').bind(lookupSlug).first<any>();
-
-if (!pageDoc && aliasMap[lookupSlug]) {
-  pageDoc = await db.prepare('SELECT * FROM posts WHERE slug = ?').bind(aliasMap[lookupSlug]).first<any>();
+if (aliasRedirects[cleanSlug]) {
+  return Astro.redirect(aliasRedirects[cleanSlug], 301);
 }
+
+let pageDoc = await db.prepare('SELECT * FROM posts WHERE slug = ?').bind(cleanSlug).first<any>();
 
 // If it's an article (is_page = 0) accessed at root, redirect to /tin-tuc/:slug
 if (pageDoc && pageDoc.is_page === 0) {
@@ -76,16 +72,51 @@ db.prepare('UPDATE posts SET views = views + 1 WHERE id = ?').bind(pageDoc.id).r
 // Other static pages for quick navigation
 const otherPages = (await db.prepare('SELECT id, slug, title, category FROM posts WHERE is_page = 1 AND id != ? ORDER BY id ASC').bind(pageDoc.id).all<any>()).results || [];
 
-const isContactPage = pageDoc.slug === 'lien-he' || pageDoc.slug === 'thong-tin-lien-he';
-const isFaqPage = pageDoc.slug === 'cau-hoi-thuong-gap' || pageDoc.slug === 'cau-hoi-thuong-gap-faqs' || pageDoc.slug === 'hoi-dap';
-const isShippingPage = pageDoc.slug === 'giao-nhan' || pageDoc.slug === 'chinh-sach-giao-nhan';
+const isContactPage = pageDoc.slug === 'lien-he';
+const isFaqPage = pageDoc.slug === 'cau-hoi-thuong-gap';
+const isShippingPage = pageDoc.slug === 'giao-nhan';
 const renderedHtml = renderMarkdown(pageDoc.content || '');
+
+const pageSchema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": `https://thegioidaquy.net/${pageDoc.slug}#webpage`,
+      "url": `https://thegioidaquy.net/${pageDoc.slug}`,
+      "name": pageDoc.seo_title || pageDoc.title,
+      "description": pageDoc.seo_description || pageDoc.excerpt || pageDoc.title,
+      "isPartOf": {
+        "@type": "WebSite",
+        "@id": "https://thegioidaquy.net/#website"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Trang Chủ",
+          "item": "https://thegioidaquy.net"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": pageDoc.title,
+          "item": `https://thegioidaquy.net/${pageDoc.slug}`
+        }
+      ]
+    }
+  ]
+};
 ---
 
 <StoreLayout 
   title={pageDoc.seo_title || pageDoc.title}
   description={pageDoc.seo_description || pageDoc.excerpt}
   activeNav={isContactPage ? 'contact' : pageDoc.slug === 'gioi-thieu' ? 'about' : isShippingPage ? 'shipping' : isFaqPage ? 'faqs' : 'page'}
+  schemaJson={pageSchema}
 >
   <div class="container" style="padding: 40px 24px; max-width: 960px;">
     <!-- BREADCRUMB -->

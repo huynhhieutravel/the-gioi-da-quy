@@ -85,6 +85,63 @@ const otherArticles = (await db.prepare(`
 `).bind(matchedPost.id).all<any>()).results || [];
 
 const renderedHtml = renderMarkdown(matchedPost.content || '');
+
+const articleImageUrl = matchedPost.thumbnail?.startsWith('http') 
+  ? matchedPost.thumbnail 
+  : `https://thegioidaquy.net${matchedPost.thumbnail?.startsWith('/') ? '' : '/'}${matchedPost.thumbnail || 'uploads/site_assets/Phongthuy-HoaMocLan-thegioidaquy.jpg'}`;
+
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Article",
+      "@id": `https://thegioidaquy.net/tin-tuc/${matchedPost.slug}#article`,
+      "headline": matchedPost.title,
+      "url": `https://thegioidaquy.net/tin-tuc/${matchedPost.slug}`,
+      "image": articleImageUrl,
+      "description": matchedPost.seo_description || matchedPost.excerpt || matchedPost.title,
+      "datePublished": matchedPost.published_at || "2018-01-01",
+      "dateModified": matchedPost.updated_at || matchedPost.published_at || "2026-10-01",
+      "author": {
+        "@type": "Person",
+        "name": "Đoàn Quốc Sơn",
+        "jobTitle": "Chuyên gia Cố vấn Năng lượng Phong Thủy"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Thế Giới Đá Quý - Phong Thủy Hoa Mộc Lan",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://thegioidaquy.net/favicon.png"
+        }
+      },
+      "mainEntityOfPage": `https://thegioidaquy.net/tin-tuc/${matchedPost.slug}`
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Trang Chủ",
+          "item": "https://thegioidaquy.net"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Tin Tức & Cẩm Nang",
+          "item": "https://thegioidaquy.net/tin-tuc"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": matchedPost.title,
+          "item": `https://thegioidaquy.net/tin-tuc/${matchedPost.slug}`
+        }
+      ]
+    }
+  ]
+};
 ---
 
 <StoreLayout 
@@ -92,6 +149,7 @@ const renderedHtml = renderMarkdown(matchedPost.content || '');
   description={matchedPost.seo_description || matchedPost.excerpt}
   image={matchedPost.thumbnail}
   activeNav="news"
+  schemaJson={articleSchema}
 >
   <div class="container" style="padding: 40px 24px; max-width: 920px;">
     <!-- BREADCRUMB -->

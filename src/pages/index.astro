@@ -38,9 +38,35 @@ const articles = (await db.prepare(`
 const settingsRows = (await db.prepare('SELECT key, value FROM settings').all<{ key: string; value: string }>()).results || [];
 const s: Record<string, string> = {};
 for (const r of settingsRows) s[r.key] = r.value;
+
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://thegioidaquy.net/#website",
+      "url": "https://thegioidaquy.net",
+      "name": "Thế Giới Đá Quý - Phong Thủy Hoa Mộc Lan",
+      "alternateName": ["Phong Thủy Hoa Mộc Lan", "The Gioi Da Quy"],
+      "description": "Cửa hàng đá quý phong thủy thiên nhiên Hoa Mộc Lan TP.HCM - Hơn 15 năm uy tín cung cấp đá quý phong thủy, Phật bản mệnh 12 con giáp, linh vật chiêu tài kiểm định SJC, PNJ.",
+      "publisher": {
+        "@id": "https://thegioidaquy.net/#organization"
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://thegioidaquy.net/san-pham?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      },
+      "inLanguage": "vi-VN"
+    }
+  ]
+};
 ---
 
-<StoreLayout title="Trang Chủ" activeNav="home">
+<StoreLayout title="Trang Chủ" activeNav="home" schemaJson={websiteSchema}>
   <!-- HERO BANNER -->
   <section class="hero-section">
     <div class="container hero-content">
@@ -137,7 +163,7 @@ for (const r of settingsRows) s[r.key] = r.value;
         <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--gold-accent); letter-spacing: 1px;">Tuyển Chọn Đặc Biệt</span>
         <h3 style="font-family: var(--font-heading); font-size: 28px; color: #fff; margin-top: 4px;">Sản Phẩm Phong Thủy Nổi Bật</h3>
       </div>
-      <a href="/san-pham" style="color: var(--gold-accent); font-weight: 600; font-size: 14px; text-decoration: none;">Xem tất cả 47 sản phẩm →</a>
+      <a href="/san-pham" style="color: var(--gold-accent); font-weight: 600; font-size: 14px; text-decoration: none;">Xem tất cả {totalProducts} sản phẩm →</a>
     </div>
 
     <div class="products-grid">

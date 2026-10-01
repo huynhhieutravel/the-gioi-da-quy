@@ -13,14 +13,23 @@ Disallow: /wp-admin/
 Disallow: /wp-login.php
 Disallow: /wp-includes/
 
-# Explicit search crawlers
+# Explicit rules for Googlebot (RFC 9309 requires group-level completeness)
 User-agent: Googlebot
 Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /user/
+Disallow: /wp-admin/
+Disallow: /wp-login.php
+Disallow: /wp-includes/
 
+# Image search indexing
 User-agent: Googlebot-Image
 Allow: /uploads/
 Allow: /favicon.png
 Allow: /favicon.ico
+Disallow: /admin/
+Disallow: /api/
 
 # Sitemaps
 Sitemap: ${domain}/sitemap.xml

@@ -23,6 +23,21 @@ export const GET: APIRoute = async ({ locals, url, site }) => {
     { loc: '/cam-ket-kiem-dinh', priority: '0.6', changefreq: 'monthly' }
   ];
 
+  // Dynamic static pages from DB (ensures any new pages added via CMS are auto-indexed)
+  const dbPages = (await db.prepare("SELECT slug, updated_at FROM posts WHERE is_page = 1 AND status = 'published'").all<{ slug: string; updated_at?: string }>()).results || [];
+  const existingLocs = new Set(staticRoutes.map(r => r.loc));
+  for (const dp of dbPages) {
+    const loc = `/${dp.slug}`;
+    if (!existingLocs.has(loc)) {
+      staticRoutes.push({
+        loc,
+        priority: '0.6',
+        changefreq: 'monthly'
+      });
+      existingLocs.add(loc);
+    }
+  }
+
   // Products
   const products = (await db.prepare('SELECT slug, updated_at FROM products').all<{ slug: string; updated_at?: string }>()).results || [];
 

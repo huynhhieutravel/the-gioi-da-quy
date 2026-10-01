@@ -19,6 +19,7 @@ Thumbs.db
 
 # Local test databases & temporary screenshots in root
 /data.db
+*.sqlite
 /*_screenshot.png
 /*_fixed.png
 /all_discovered_links.txt

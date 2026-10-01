@@ -9,6 +9,9 @@ const settingsRows = (await db.prepare('SELECT key, value FROM settings').all<{ 
 const s: Record<string, string> = {};
 for (const r of settingsRows) s[r.key] = r.value;
 const hotline = s.hotline || '0909.468.057';
+
+// Explicitly send HTTP 404 status code to prevent soft-404 in Google Search Console
+Astro.response.status = 404;
 ---
 
 <StoreLayout title="404 - Không Tìm Thấy Trang" activeNav="none" noindex={true}>

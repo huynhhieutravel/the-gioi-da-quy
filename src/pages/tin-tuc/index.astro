@@ -39,12 +39,72 @@ const totalCount = catStats.reduce((acc, c) => acc + c.count, 0);
 
 const featuredArticle = !currentCat && articles.length > 0 ? articles[0] : null;
 const listArticles = featuredArticle ? articles.slice(1) : articles;
+
+const pageTitle = currentCat 
+  ? `${currentCat} - Tin Tức & Cẩm Nang Phong Thủy` 
+  : "Tin Tức & Cẩm Nang Đá Quý Phong Thủy";
+
+const pageDesc = currentCat
+  ? `Tổng hợp các bài viết chuyên sâu về chủ đề ${currentCat} tại Phong Thủy Hoa Mộc Lan TP.HCM. Hướng dẫn chọn đá quý, kích hoạt năng lượng cát tường.`
+  : "Tổng hợp tin tức, kiến thức chuyên sâu về đá quý thiên nhiên, phật bản mệnh 12 con giáp và kinh nghiệm bài trí phong thủy tài lộc tại Phong Thủy Hoa Mộc Lan TP.HCM.";
+
+const canonicalParams = new URLSearchParams();
+if (currentCat) canonicalParams.set('cat', currentCat);
+const canonicalQuery = canonicalParams.toString();
+const canonicalUrl = `https://thegioidaquy.net/tin-tuc${canonicalQuery ? `?${canonicalQuery}` : ''}`;
+
+const breadcrumbItems: any[] = [
+  {
+    "@type": "ListItem",
+    "position": 1,
+    "name": "Trang Chủ",
+    "item": "https://thegioidaquy.net"
+  },
+  {
+    "@type": "ListItem",
+    "position": 2,
+    "name": "Tin Tức & Cẩm Nang Phong Thủy",
+    "item": "https://thegioidaquy.net/tin-tuc"
+  }
+];
+
+if (currentCat) {
+  breadcrumbItems.push({
+    "@type": "ListItem",
+    "position": 3,
+    "name": currentCat,
+    "item": `https://thegioidaquy.net/tin-tuc?cat=${encodeURIComponent(currentCat)}`
+  });
+}
+
+const newsIndexSchema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "CollectionPage",
+      "@id": `${canonicalUrl}#collection`,
+      "url": canonicalUrl,
+      "name": pageTitle,
+      "description": pageDesc,
+      "isPartOf": {
+        "@type": "WebSite",
+        "@id": "https://thegioidaquy.net/#website"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": breadcrumbItems
+    }
+  ]
+};
 ---
 
 <StoreLayout 
-  title="Tin Tức & Cẩm Nang Đá Quý Phong Thủy" 
-  description="Tổng hợp tin tức, kiến thức chuyên sâu về đá quý thiên nhiên, phật bản mệnh 12 con giáp và kinh nghiệm bài trí phong thủy tài lộc tại Phong Thủy Hoa Mộc Lan TP.HCM."
+  title={pageTitle} 
+  description={pageDesc}
   activeNav="news"
+  canonical={canonicalUrl}
+  schemaJson={newsIndexSchema}
 >
   <div class="container" style="padding: 40px 24px;">
     <!-- Breadcrumb -->

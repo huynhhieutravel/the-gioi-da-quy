@@ -9,6 +9,7 @@ interface Props {
   image?: string;
   canonical?: string;
   noindex?: boolean;
+  schemaJson?: any;
 }
 
 const { 
@@ -17,7 +18,8 @@ const {
   activeNav = 'home',
   image = '/uploads/site_assets/Phongthuy-HoaMocLan-thegioidaquy.jpg',
   canonical,
-  noindex = false
+  noindex = false,
+  schemaJson
 } = Astro.props;
 
 const db = getDb(Astro.locals);
@@ -34,6 +36,42 @@ const siteName = settings.site_name || 'Thế Giới Đá Quý - Phong Thủy Ho
 const cleanPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 const canonicalUrl = canonical || `https://thegioidaquy.net${cleanPath === '/' ? '' : cleanPath}`;
 const ogImage = image.startsWith('http') ? image : `https://thegioidaquy.net${image.startsWith('/') ? '' : '/'}${image}`;
+
+// Schema.org LocalBusiness / JewelryStore
+const defaultOrgSchema = {
+  "@context": "https://schema.org",
+  "@type": "JewelryStore",
+  "@id": "https://thegioidaquy.net/#organization",
+  "name": siteName,
+  "url": "https://thegioidaquy.net",
+  "logo": "https://thegioidaquy.net/favicon.png",
+  "image": ogImage,
+  "description": description,
+  "telephone": hotline.replace(/\./g, ''),
+  "priceRange": "$$",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "1163 Đường 3 Tháng 2, Phường 6",
+    "addressLocality": "Quận 11",
+    "addressRegion": "Hồ Chí Minh",
+    "postalCode": "700000",
+    "addressCountry": "VN"
+  },
+  "geo": {
+    "@type": "GeoCoordinates",
+    "latitude": 10.7592,
+    "longitude": 106.6575
+  },
+  "openingHoursSpecification": {
+    "@type": "OpeningHoursSpecification",
+    "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+    "opens": "09:00",
+    "closes": "21:30"
+  },
+  "sameAs": [
+    "https://zalo.me/0909468057"
+  ]
+};
 ---
 
 <!doctype html>
@@ -76,6 +114,12 @@ const ogImage = image.startsWith('http') ? image : `https://thegioidaquy.net${im
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json" set:html={JSON.stringify(defaultOrgSchema)} />
+    {schemaJson && (
+      <script type="application/ld+json" set:html={JSON.stringify(schemaJson)} />
+    )}
   </head>
   <body class="store-body">
     <!-- Announcement Bar -->
@@ -260,7 +304,7 @@ const ogImage = image.startsWith('http') ? image : `https://thegioidaquy.net${im
         <div class="footer-bottom" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <p>© 2010 - 2026 Thế Giới Đá Quý - Cửa Hàng Phong Thủy Hoa Mộc Lan. Showroom: 1163 Đường 3 Tháng 2, Q.11, TP.HCM.</p>
           <div style="font-size: 12px; color: var(--text-dim);">
-            <a href="/admin" style="color: var(--text-dim); text-decoration: none; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">Quản trị hệ thống</a>
+            <a href="/admin" rel="nofollow" style="color: var(--text-dim); text-decoration: none; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">Quản trị hệ thống</a>
           </div>
         </div>
       </div>
