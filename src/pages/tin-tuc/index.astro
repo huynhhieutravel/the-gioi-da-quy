@@ -1,6 +1,191 @@
 ---
+import StoreLayout from '../../layouts/StoreLayout.astro';
+import { getDb } from '../../lib/db';
+
 export const prerender = false;
 
-// Redirect /tin-tuc to /kien-thuc with 301 Permanent Redirect
-return Astro.redirect('/kien-thuc', 301);
+const db = getDb(Astro.locals);
+
+const url = new URL(Astro.request.url);
+const currentCat = url.searchParams.get('cat') || '';
+
+let query = `
+  SELECT id, slug, title, category, thumbnail, excerpt, published_at, views
+  FROM posts
+  WHERE is_page = 0
+`;
+const params: any[] = [];
+
+if (currentCat) {
+  query += ` AND category = ?`;
+  params.push(currentCat);
+}
+
+query += ` ORDER BY published_at DESC`;
+
+const stmt = db.prepare(query);
+const articles = (params.length > 0 ? await stmt.bind(...params).all<any>() : await stmt.all<any>()).results || [];
+
+// Categories count for tabs
+const catStats = (await db.prepare(`
+  SELECT category, COUNT(id) as count
+  FROM posts
+  WHERE is_page = 0
+  GROUP BY category
+  ORDER BY count DESC
+`).all<{ category: string; count: number }>()).results || [];
+
+const totalCount = catStats.reduce((acc, c) => acc + c.count, 0);
+
+const featuredArticle = !currentCat && articles.length > 0 ? articles[0] : null;
+const listArticles = featuredArticle ? articles.slice(1) : articles;
 ---
+
+<StoreLayout 
+  title="Tin Tức & Cẩm Nang Đá Quý Phong Thủy" 
+  description="Tổng hợp tin tức, kiến thức chuyên sâu về đá quý thiên nhiên, phật bản mệnh 12 con giáp và kinh nghiệm bài trí phong thủy tài lộc tại Phong Thủy Hoa Mộc Lan TP.HCM."
+  activeNav="news"
+>
+  <div class="container" style="padding: 40px 24px;">
+    <!-- Breadcrumb -->
+    <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 24px;">
+      <a href="/" style="color: var(--text-muted); text-decoration: none;">Trang Chủ</a> / 
+      <span style="color: #fff; font-weight: 600;">Tin Tức & Cẩm Nang Phong Thủy</span>
+    </div>
+
+    <!-- Header Banner -->
+    <div style="text-align: center; max-width: 780px; margin: 0 auto 40px;">
+      <span style="font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--gold-accent); letter-spacing: 2px;">
+        Thế Giới Đá Quý • Hoa Mộc Lan
+      </span>
+      <h1 style="font-family: var(--font-heading); font-size: 36px; color: #fff; margin-top: 8px; line-height: 1.3;">
+        Tin Tức & Cẩm Nang Phong Thủy
+      </h1>
+      <p style="color: var(--text-muted); font-size: 15px; margin-top: 12px; line-height: 1.6;">
+        Tuyển tập các bài viết tin tức, cẩm nang chọn đá quý hộ mệnh, ý nghĩa linh vật chiêu tài và hướng dẫn bài trí phong thủy cát tường chuẩn xác từ chuyên gia.
+      </p>
+    </div>
+
+    <!-- Category Filter Tabs -->
+    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 40px;">
+      <a 
+        href="/tin-tuc" 
+        class={`category-tab ${!currentCat ? 'active' : ''}`}
+        style={`padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s; border: 1px solid ${!currentCat ? 'var(--gold-accent)' : 'var(--store-border)'}; background: ${!currentCat ? 'rgba(212,175,55,0.15)' : 'var(--store-card)'}; color: ${!currentCat ? 'var(--gold-accent)' : 'var(--text-muted)'};`}
+      >
+        Tất Cả ({totalCount})
+      </a>
+      {catStats.map((c) => (
+        <a 
+          href={`/tin-tuc?cat=${encodeURIComponent(c.category)}`}
+          class={`category-tab ${currentCat === c.category ? 'active' : ''}`}
+          style={`padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s; border: 1px solid ${currentCat === c.category ? 'var(--gold-accent)' : 'var(--store-border)'}; background: ${currentCat === c.category ? 'rgba(212,175,55,0.15)' : 'var(--store-card)'}; color: ${currentCat === c.category ? 'var(--gold-accent)' : 'var(--text-muted)'};`}
+        >
+          {c.category} ({c.count})
+        </a>
+      ))}
+    </div>
+
+    <!-- Featured Hero Article (when not filtering) -->
+    {featuredArticle && (
+      <div style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 16px; overflow: hidden; margin-bottom: 48px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); align-items: center;">
+          {featuredArticle.thumbnail && (
+            <div style="height: 100%; min-height: 280px; max-height: 380px; overflow: hidden;">
+              <a href={`/tin-tuc/${featuredArticle.slug}`}>
+                <img 
+                  src={featuredArticle.thumbnail} 
+                  alt={featuredArticle.title} 
+                  style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;"
+                  onmouseover="this.style.transform='scale(1.03)'"
+                  onmouseout="this.style.transform='scale(1)'"
+                />
+              </a>
+            </div>
+          )}
+          <div style="padding: 36px 32px; display: flex; flex-direction: column; justify-content: center;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+              <span style="background: rgba(212,175,55,0.15); color: var(--gold-accent); border: 1px solid rgba(212,175,55,0.3); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 6px;">
+                ⭐ Bài Viết Nổi Bật
+              </span>
+              <span style="font-size: 12px; color: var(--text-dim);">{featuredArticle.category} • {featuredArticle.published_at}</span>
+            </div>
+            <h2 style="font-family: var(--font-heading); font-size: 26px; line-height: 1.35; margin-bottom: 14px;">
+              <a href={`/tin-tuc/${featuredArticle.slug}`} style="color: #fff; text-decoration: none;">
+                {featuredArticle.title}
+              </a>
+            </h2>
+            <p style="color: var(--text-muted); font-size: 14px; line-height: 1.7; margin-bottom: 24px;">
+              {featuredArticle.excerpt}
+            </p>
+            <div>
+              <a href={`/tin-tuc/${featuredArticle.slug}`} class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+                Đọc bài viết chi tiết →
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    <!-- Main Articles Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 28px;">
+      {listArticles.map((a) => (
+        <article style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, border-color 0.2s;" onmouseover="this.style.borderColor='rgba(212,175,55,0.4)'" onmouseout="this.style.borderColor='var(--store-border)'">
+          {a.thumbnail && (
+            <a href={`/tin-tuc/${a.slug}`} style="overflow: hidden; height: 200px; display: block;">
+              <img 
+                src={a.thumbnail} 
+                alt={a.title} 
+                loading="lazy"
+                style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;"
+                onmouseover="this.style.transform='scale(1.05)'"
+                onmouseout="this.style.transform='scale(1)'"
+              />
+            </a>
+          )}
+          <div style="padding: 22px; display: flex; flex-direction: column; flex: 1;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-size: 11px; color: var(--gold-accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                {a.category}
+              </span>
+              <span style="font-size: 11px; color: var(--text-dim);">{a.published_at}</span>
+            </div>
+            <h3 style="font-size: 17px; font-weight: 700; line-height: 1.4; margin-bottom: 12px;">
+              <a href={`/tin-tuc/${a.slug}`} style="color: #fff; text-decoration: none;">
+                {a.title}
+              </a>
+            </h3>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+              {a.excerpt}
+            </p>
+            <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+              <a href={`/tin-tuc/${a.slug}`} style="font-size: 13px; color: var(--gold-accent); font-weight: 600; text-decoration: none;">
+                Xem chi tiết →
+              </a>
+              <span style="font-size: 11px; color: var(--text-dim);">👁 {a.views || 0}</span>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+
+    <!-- Consultation CTA Box -->
+    <div style="margin-top: 60px; background: linear-gradient(135deg, rgba(16,36,25,0.9), rgba(6,78,59,0.5)); border: 1px solid rgba(212,175,55,0.3); border-radius: 16px; padding: 40px; text-align: center;">
+      <h3 style="font-family: var(--font-heading); font-size: 26px; color: #fff; margin-bottom: 10px;">
+        Bạn Đang Cần Tư Vấn Chọn Đá Quý Hợp Bản Mệnh?
+      </h3>
+      <p style="color: rgba(255,255,255,0.8); max-width: 600px; margin: 0 auto 24px; font-size: 14px; line-height: 1.6;">
+        Chuyên gia phong thủy Hoa Mộc Lan với hơn 15 năm kinh nghiệm luôn sẵn sàng giải đáp thắc mắc về ngũ hành bản mệnh, kiểm định đá tự nhiên và cách kích hoạt tài lộc.
+      </p>
+      <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
+        <a href="tel:0909468057" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+          📞 Hotline: 0909.468.057
+        </a>
+        <a href="https://zalo.me/0909468057" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 10px 22px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">
+          💬 Chat Zalo Tư Vấn Miễn Phí
+        </a>
+      </div>
+    </div>
+  </div>
+</StoreLayout>

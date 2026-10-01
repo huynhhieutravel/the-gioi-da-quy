@@ -1,51 +1,172 @@
 ---
+import StoreLayout from '../../layouts/StoreLayout.astro';
 import { getDb } from '../../lib/db';
-import { slugify } from '../../lib/helpers';
+import { renderMarkdown, slugify } from '../../lib/helpers';
 
 export const prerender = false;
 
 const db = getDb(Astro.locals);
 let rawSlug = Astro.params.slug || '';
 
-// Clean up raw slug
-// Example 1: Tac-dung-cua-3-loai-da-phong-thuy-pho-bien-hien-nay-2014.html
-// Example 2: Chinh-Sach-va-Quy-Dinh-Chung-1994.html
+// Clean up raw slug (e.g. Tac-dung-cua-3-loai-da-phong-thuy-pho-bien-hien-nay-2014.html)
+const hasHtmlExt = /\.html$/i.test(rawSlug);
 let cleaned = rawSlug.replace(/\.html$/i, '').trim();
 
 // Strip trailing numeric ID if attached (e.g. -2014, -1994)
+const hasNumericId = /-\d+$/.test(cleaned);
 const cleanSlugWithoutId = cleaned.replace(/-\d+$/, '');
 const normalizedSlug = slugify(cleanSlugWithoutId);
 
-// Static alias mapping for legacy news URLs
+// Comprehensive static alias mapping for legacy news URLs
 const legacyMap: Record<string, string> = {
+  // Static pages mapped from old /tin-tuc/
   'chinh-sach-va-quy-dinh-chung': '/chinh-sach-va-quy-dinh',
+  'mua-hang-va-chinh-sach-bao-hanh-da': '/chinh-sach-va-quy-dinh',
   'hinh-thuc-thanh-toan': '/hinh-thuc-thanh-toan',
   'chinh-sach-giao-nhan': '/giao-nhan',
+  'cach-van-chuyen-va-giao-nhan-cua-thegioidaquy': '/giao-nhan',
+  'chinh-sach-bao-mat-thong-tin-cua-thegioidaquy': '/chinh-sach-bao-mat',
   'cau-hoi-thuong-gap': '/cau-hoi-thuong-gap',
   'thong-tin-lien-he': '/lien-he',
-  'gioi-thieu': '/gioi-thieu'
+  'gioi-thieu': '/gioi-thieu',
+
+  // Articles with shortened or legacy titles on old site
+  'bao-quan-cam-thach': '/tin-tuc/huong-dan-bao-quan-cam-thach-va-ngoc-thien-nhien',
+  'ca-chep-trong-phong-thuy': '/tin-tuc/y-nghia-ca-chep-trong-phong-thuy',
+  'cong-dung-da-long-cong': '/tin-tuc/cong-dung-da-long-cong-malachite',
+  'cong-dung-da-sugilite': '/tin-tuc/cong-dung-da-sugilite-vien-da-tam-linh',
+  'cung-giao-thua-nam-moi-2018': '/tin-tuc/cung-giao-thua-nam-moi',
+  'deo-nhan-ngon-giua-de-giu-tien': '/tin-tuc/deo-nhan-ngon-giua-de-giu-tien-va-chieu-tai',
+  'mua-ban-cam-thach-o-viet-nam': '/tin-tuc/kinh-nghiem-nhan-biet-mua-ban-cam-thach-that',
+  'ngua-trong-phong-thuy': '/tin-tuc/bieu-tuong-ngua-trong-phong-thuy-ma-dao-thanh-cong',
+  'tet-nguyen-dan': '/tin-tuc/tet-nguyen-dan-phong-tuc-va-vat-pham-phong-thuy',
+  'xem-ngay-khai-truong-dau-nam-moi-2018': '/tin-tuc/xem-ngay-khai-truong-dau-nam-moi',
+  'xong-nha-dau-nam-moi-2018-phan-mot': '/tin-tuc/xong-nha-dau-nam-moi-cach-chon-tuoi',
+  'xong-nha-dau-nam-moi-2018': '/tin-tuc/xong-nha-dau-nam-moi-cach-chon-tuoi',
+  'y-nghia-thap-van-xuong': '/tin-tuc/y-nghia-thap-van-xuong-da-tu-nhien'
 };
 
-if (legacyMap[normalizedSlug]) {
+if (legacyMap[normalizedSlug] && legacyMap[normalizedSlug] !== `/tin-tuc/${rawSlug}`) {
   return Astro.redirect(legacyMap[normalizedSlug], 301);
 }
 
 // Check database for matching post or article
-let matchedPost = await db.prepare('SELECT id, slug, is_page FROM posts WHERE slug = ?').bind(normalizedSlug).first<any>();
+let matchedPost = await db.prepare('SELECT * FROM posts WHERE slug = ?').bind(normalizedSlug).first<any>();
 
 if (!matchedPost) {
   // Try matching with partial slug or like query
-  matchedPost = await db.prepare('SELECT id, slug, is_page FROM posts WHERE slug LIKE ? LIMIT 1').bind(`%${normalizedSlug.slice(0, 20)}%`).first<any>();
+  matchedPost = await db.prepare('SELECT * FROM posts WHERE slug LIKE ? LIMIT 1').bind(`%${normalizedSlug.slice(0, 20)}%`).first<any>();
 }
 
-if (matchedPost) {
-  if (matchedPost.is_page === 1) {
-    return Astro.redirect(`/${matchedPost.slug}`, 301);
-  } else {
-    return Astro.redirect(`/kien-thuc/${matchedPost.slug}`, 301);
-  }
+if (!matchedPost) {
+  return Astro.rewrite('/404');
 }
 
-// Fallback to Knowledge hub
-return Astro.redirect('/kien-thuc', 301);
+// If matched post is a page, redirect to its clean root URL
+if (matchedPost.is_page === 1) {
+  return Astro.redirect(`/${matchedPost.slug}`, 301);
+}
+
+// If incoming URL has .html extension or legacy numeric ID, redirect to clean URL
+if (hasHtmlExt || hasNumericId || rawSlug !== matchedPost.slug) {
+  return Astro.redirect(`/tin-tuc/${matchedPost.slug}`, 301);
+}
+
+// At this point, we are at the canonical URL: /tin-tuc/[canonical-slug]
+// Increment views
+db.prepare('UPDATE posts SET views = views + 1 WHERE id = ?').bind(matchedPost.id).run();
+
+const otherArticles = (await db.prepare(`
+  SELECT id, slug, title, category, published_at, thumbnail 
+  FROM posts 
+  WHERE id != ? AND is_page = 0 
+  ORDER BY published_at DESC 
+  LIMIT 4
+`).bind(matchedPost.id).all<any>()).results || [];
+
+const renderedHtml = renderMarkdown(matchedPost.content || '');
 ---
+
+<StoreLayout 
+  title={matchedPost.seo_title || matchedPost.title}
+  description={matchedPost.seo_description || matchedPost.excerpt}
+  activeNav="news"
+>
+  <div class="container" style="padding: 40px 24px; max-width: 920px;">
+    <!-- BREADCRUMB -->
+    <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 24px;">
+      <a href="/" style="color: var(--text-muted); text-decoration: none;">Trang Chủ</a> / 
+      <a href="/tin-tuc" style="color: var(--text-muted); text-decoration: none;">Tin Tức & Cẩm Nang</a> / 
+      <span style="color: #fff; font-weight: 600;">{matchedPost.title}</span>
+    </div>
+
+    <article style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 16px; padding: 40px; margin-bottom: 40px;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+        <span class="badge badge-damenh">{matchedPost.category}</span>
+        <span style="font-size: 13px; color: var(--text-dim);">Ngày đăng: {matchedPost.published_at}</span>
+        <span style="font-size: 13px; color: var(--gold-accent);">👁 {matchedPost.views} lượt xem</span>
+      </div>
+
+      <h1 style="font-family: var(--font-heading); font-size: 32px; color: #fff; margin: 0 0 24px; line-height: 1.35;">
+        {matchedPost.title}
+      </h1>
+
+      {matchedPost.thumbnail && !matchedPost.content?.includes(matchedPost.thumbnail) && (
+        <div style="margin-bottom: 32px; border-radius: 12px; overflow: hidden; max-height: 480px; border: 1px solid var(--store-border);">
+          <img src={matchedPost.thumbnail} alt={matchedPost.title} style="width: 100%; height: 100%; object-fit: cover;" />
+        </div>
+      )}
+
+      <div class="prose-content" set:html={renderedHtml} />
+
+      <!-- AUTHOR BIO SNIPPET -->
+      <div style="margin-top: 48px; padding: 24px; background: rgba(255,255,255,0.02); border: 1px solid var(--store-border); border-radius: 12px; display: flex; align-items: center; gap: 20px;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--gold-accent), #92400e); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; color: #fff; flex-shrink: 0;">
+          QS
+        </div>
+        <div>
+          <h4 style="color: #fff; font-size: 16px; margin-bottom: 4px;">Biên soạn: Đoàn Quốc Sơn</h4>
+          <p style="color: var(--text-muted); font-size: 13px; margin: 0; line-height: 1.5;">
+            Chuyên gia cố vấn năng lượng phong thủy & Chủ sáng lập Cửa Hàng Phong Thủy Hoa Mộc Lan (1163 Đường 3/2, Quận 11, TP.HCM). Hơn 15 năm nghiên cứu khoáng vật học và ứng dụng đá quý thiên nhiên trong đời sống.
+          </p>
+        </div>
+      </div>
+    </article>
+
+    <!-- OTHER ARTICLES -->
+    {otherArticles.length > 0 && (
+      <div style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 16px; padding: 32px; margin-bottom: 40px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h3 style="font-size: 18px; color: #fff; display: flex; align-items: center; gap: 8px; margin: 0;">
+            <span style="color: var(--gold-accent);">✦</span>
+            <span>Bài Viết Phong Thủy & Đá Quý Cùng Chuyên Mục</span>
+          </h3>
+          <a href="/tin-tuc" style="font-size: 13px; color: var(--gold-accent); text-decoration: none; font-weight: 600;">
+            Xem tất cả tin tức →
+          </a>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+          {otherArticles.map((oa) => (
+            <a 
+              href={`/tin-tuc/${oa.slug}`} 
+              style="display: flex; gap: 14px; text-decoration: none; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--store-border); border-radius: 10px; transition: all 0.2s;"
+              onmouseover="this.style.borderColor='var(--gold-accent)';"
+              onmouseout="this.style.borderColor='var(--store-border)';"
+            >
+              {oa.thumbnail && (
+                <img src={oa.thumbnail} alt="" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px; flex-shrink: 0;" />
+              )}
+              <div style="display: flex; flex-direction: column; justify-content: center;">
+                <span style="font-size: 11px; color: var(--gold-accent); margin-bottom: 4px;">{oa.category}</span>
+                <span style="font-size: 14px; font-weight: 600; color: #fff; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                  {oa.title}
+                </span>
+                <span style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">{oa.published_at}</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</StoreLayout>

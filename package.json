@@ -7,6 +7,9 @@
     "dev": "astro dev --host",
     "build": "astro build",
     "preview": "astro preview",
+    "deploy": "astro build && wrangler deploy",
+    "sync:d1": "node scripts/sync_to_cloudflare_d1.mjs",
+    "sync:r2": "node scripts/upload_to_r2.mjs",
     "seed": "node scripts/seed_db.mjs"
   },
   "keywords": [],

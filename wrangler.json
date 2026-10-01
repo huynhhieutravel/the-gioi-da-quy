@@ -4,11 +4,21 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  "routes": [
+    {
+      "pattern": "thegioidaquy.net/*",
+      "zone_name": "thegioidaquy.net"
+    },
+    {
+      "pattern": "www.thegioidaquy.net/*",
+      "zone_name": "thegioidaquy.net"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "thegioidaquy-d1",
-      "database_id": "thegioidaquy-d1-placeholder"
+      "database_id": "01925438-242c-4426-8a90-c331ab7efe84"
     }
   ],
   "r2_buckets": [

@@ -12,7 +12,7 @@ export const GET: APIRoute = async ({ locals, url, site }) => {
   const staticRoutes = [
     { loc: '/', priority: '1.0', changefreq: 'daily' },
     { loc: '/san-pham', priority: '0.9', changefreq: 'daily' },
-    { loc: '/kien-thuc', priority: '0.8', changefreq: 'weekly' },
+    { loc: '/tin-tuc', priority: '0.9', changefreq: 'daily' },
     { loc: '/giao-nhan', priority: '0.7', changefreq: 'monthly' },
     { loc: '/cau-hoi-thuong-gap', priority: '0.7', changefreq: 'monthly' },
     { loc: '/gioi-thieu', priority: '0.7', changefreq: 'monthly' },
@@ -53,7 +53,7 @@ export const GET: APIRoute = async ({ locals, url, site }) => {
   for (const a of articles) {
     const mod = a.updated_at ? a.updated_at.split(' ')[0] : (a.published_at || now);
     xmlEntries.push(`  <url>
-    <loc>${domain}/kien-thuc/${a.slug}</loc>
+    <loc>${domain}/tin-tuc/${a.slug}</loc>
     <lastmod>${mod}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

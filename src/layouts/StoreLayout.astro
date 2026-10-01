@@ -58,9 +58,9 @@ const siteName = settings.site_name || 'Thế Giới Đá Quý - Phong Thủy Ho
         <nav class="store-nav">
           <a href="/" class={activeNav === 'home' ? 'active' : ''}>Trang Chủ</a>
           <a href="/san-pham" class={activeNav === 'products' ? 'active' : ''}>Sản Phẩm Phong Thủy</a>
+          <a href="/tin-tuc" class={activeNav === 'news' || activeNav === 'blog' ? 'active' : ''}>Tin Tức & Cẩm Nang</a>
           <a href="/giao-nhan" class={activeNav === 'shipping' ? 'active' : ''}>Giao Nhận</a>
           <a href="/cau-hoi-thuong-gap" class={activeNav === 'faqs' ? 'active' : ''}>Hỏi Đáp</a>
-          <a href="/kien-thuc" class={activeNav === 'blog' ? 'active' : ''}>Kiến Thức Đá Quý</a>
           <a href="/gioi-thieu" class={activeNav === 'about' ? 'active' : ''}>Giới Thiệu</a>
           <a href="/lien-he" class={activeNav === 'contact' ? 'active' : ''}>Liên Hệ</a>
         </nav>
@@ -103,9 +103,9 @@ const siteName = settings.site_name || 'Thế Giới Đá Quý - Phong Thủy Ho
     <nav class="mobile-subnav" aria-label="Điều hướng nhanh di động">
       <a href="/" class={activeNav === 'home' ? 'active' : ''}>Trang Chủ</a>
       <a href="/san-pham" class={activeNav === 'products' ? 'active' : ''}>Sản Phẩm</a>
+      <a href="/tin-tuc" class={activeNav === 'news' || activeNav === 'blog' ? 'active' : ''}>Tin Tức</a>
       <a href="/giao-nhan" class={activeNav === 'shipping' ? 'active' : ''}>Giao Nhận</a>
       <a href="/cau-hoi-thuong-gap" class={activeNav === 'faqs' ? 'active' : ''}>Hỏi Đáp</a>
-      <a href="/kien-thuc" class={activeNav === 'blog' ? 'active' : ''}>Kiến Thức</a>
       <a href="/gioi-thieu" class={activeNav === 'about' ? 'active' : ''}>Giới Thiệu</a>
       <a href="/lien-he" class={activeNav === 'contact' ? 'active' : ''}>Liên Hệ</a>
     </nav>
@@ -130,9 +130,9 @@ const siteName = settings.site_name || 'Thế Giới Đá Quý - Phong Thủy Ho
       <div class="mobile-drawer-links">
         <a href="/" class={activeNav === 'home' ? 'active' : ''}>🏠 Trang Chủ</a>
         <a href="/san-pham" class={activeNav === 'products' ? 'active' : ''}>💎 Sản Phẩm Phong Thủy</a>
+        <a href="/tin-tuc" class={activeNav === 'news' || activeNav === 'blog' ? 'active' : ''}>📰 Tin Tức & Cẩm Nang Đá Quý</a>
         <a href="/giao-nhan" class={activeNav === 'shipping' ? 'active' : ''}>🚚 Chính Sách Giao Nhận</a>
         <a href="/cau-hoi-thuong-gap" class={activeNav === 'faqs' ? 'active' : ''}>❓ Câu Hỏi Thường Gặp (FAQs)</a>
-        <a href="/kien-thuc" class={activeNav === 'blog' ? 'active' : ''}>📖 Cẩm Nang Kiến Thức Đá Quý</a>
         <a href="/gioi-thieu" class={activeNav === 'about' ? 'active' : ''}>✨ Giới Thiệu Cửa Hàng</a>
         <a href="/lien-he" class={activeNav === 'contact' ? 'active' : ''}>📍 Bản Đồ & Thông Tin Liên Hệ</a>
         <a href="/chinh-sach-va-quy-dinh">📜 Chính Sách & Quy Định Chung</a>
@@ -189,7 +189,19 @@ const siteName = settings.site_name || 'Thế Giới Đá Quý - Phong Thủy Ho
           </div>
 
           <div class="footer-col">
-            <h4>Chính Sách & Hỗ Trợ</h4>
+            <h4>Tin Tức & Cẩm Nang</h4>
+            <ul>
+              <li><a href="/tin-tuc/tac-dung-cua-3-loai-da-phong-thuy-pho-bien-hien-nay">Tác Dụng 3 Loại Đá Phong Thủy</a></li>
+              <li><a href="/tin-tuc/cach-dat-tuong-di-lac-hop-phong-thuy">Cách Đặt Tượng Phật Di Lặc</a></li>
+              <li><a href="/tin-tuc/ho-phach-la-gi-lich-su-khai-thac-va-su-dung-ho-phach">Hổ Phách Là Gì & Tác Dụng</a></li>
+              <li><a href="/tin-tuc/deo-nhan-ngon-giua-de-giu-tien-va-chieu-tai">Đeo Nhẫn Ngón Giữa Giữ Tiền</a></li>
+              <li><a href="/tin-tuc/kinh-nghiem-nhan-biet-mua-ban-cam-thach-that">Nhận Biết Cẩm Thạch Thật</a></li>
+              <li><a href="/tin-tuc" style="color: var(--gold-accent); font-weight: 700;">Xem tất cả bài viết tin tức →</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-col">
+            <h4>Chính Sách & Cam Kết</h4>
             <ul>
               <li><a href="/gioi-thieu">Giới Thiệu Showroom</a></li>
               <li><a href="/chinh-sach-va-quy-dinh">Chính Sách Quy Định Chung</a></li>
@@ -197,17 +209,8 @@ const siteName = settings.site_name || 'Thế Giới Đá Quý - Phong Thủy Ho
               <li><a href="/hinh-thuc-thanh-toan">Hình Thức Thanh Toán</a></li>
               <li><a href="/giao-nhan">Chính Sách Giao Nhận COD</a></li>
               <li><a href="/cau-hoi-thuong-gap">Câu Hỏi Thường Gặp (FAQs)</a></li>
-              <li><a href="/lien-he">Bản Đồ Chỉ Đường & Liên Hệ</a></li>
               <li><a href="/cam-ket-kiem-dinh">Cam Kết Giám Định SJC</a></li>
             </ul>
-          </div>
-
-          <div class="footer-col">
-            <h4>Cam Kết Chất Lượng</h4>
-            <p>✅ 100% đá tự nhiên nguyên bản, không bột đá ép màu.</p>
-            <p style="margin-top: 6px;">✅ Hỗ trợ kiểm định tại SJC, PNJ, RGG toàn quốc.</p>
-            <p style="margin-top: 6px;">✅ Giao hàng tận nơi toàn quốc, kiểm tra trước khi nhận.</p>
-            <p style="margin-top: 6px;">✅ Bảo hành dây và làm mới miễn phí trọn đời.</p>
           </div>
         </div>
 

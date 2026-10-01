@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
-import fs from 'node:fs';
-import path from 'node:path';
+import { env } from 'cloudflare:workers';
 import { getDb } from '../../../lib/db';
 
 export const prerender = false;
@@ -64,6 +63,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const db = getDb(locals);
+    const bucket = (env as any)?.MEDIA_BUCKET;
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const folder = (formData.get('folder') as string) || 'uploads';
@@ -78,20 +78,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const timestamp = Date.now();
     const safeName = file.name.toLowerCase().replace(/[^a-z0-9.\-_]/g, '-');
     const filename = `${timestamp}-${safeName}`;
+    const arrayBuffer = await file.arrayBuffer();
 
-    // Target uploads directory
-    const uploadsDir = path.resolve(process.cwd(), 'public', 'uploads', folder === 'uploads' ? '' : folder);
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const filePath = path.join(uploadsDir, filename);
-    fs.writeFileSync(filePath, buffer);
-
-    const relWebUrl = folder === 'uploads' ? `/uploads/${filename}` : `/uploads/${folder}/${filename}`;
+    const relKey = folder === 'uploads' ? `uploads/${filename}` : `uploads/${folder}/${filename}`;
+    const relWebUrl = `/${relKey}`;
     const id = `media-${timestamp}`;
     const cleanTitle = safeName.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+
+    if (bucket) {
+      await bucket.put(relKey, arrayBuffer, {
+        httpMetadata: { contentType: file.type || 'image/jpeg' }
+      });
+    } else {
+      // Local development fallback
+      try {
+        const fs = await import('node:fs');
+        const path = await import('node:path');
+        const uploadsDir = path.resolve(process.cwd(), 'public', 'uploads', folder === 'uploads' ? '' : folder);
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        fs.writeFileSync(path.join(uploadsDir, filename), Buffer.from(arrayBuffer));
+      } catch (err) {
+        console.warn('Local FS write error:', err);
+      }
+    }
 
     await db.prepare(`
       INSERT INTO media (id, url, filename, title, alt_text, mime_type, size_bytes, folder, created_at)
@@ -175,6 +186,7 @@ export const PUT = PATCH;
 export const DELETE: APIRoute = async ({ request, locals }) => {
   try {
     const db = getDb(locals);
+    const bucket = (env as any)?.MEDIA_BUCKET;
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
 
@@ -202,11 +214,22 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
     for (const mediaId of idsToDelete) {
       const media = await db.prepare('SELECT url FROM media WHERE id = ?').bind(mediaId).first<any>();
-      if (media && media.url && media.url.startsWith('/uploads/')) {
-        const localPath = path.resolve(process.cwd(), 'public', media.url.replace(/^\//, ''));
-        if (fs.existsSync(localPath)) {
+      if (media && media.url) {
+        if (bucket) {
+          const r2Key = media.url.replace(/^\//, '');
           try {
-            fs.unlinkSync(localPath);
+            await bucket.delete(r2Key);
+          } catch (e) {
+            console.warn('R2 delete error:', e);
+          }
+        } else {
+          try {
+            const fs = await import('node:fs');
+            const path = await import('node:path');
+            const localPath = path.resolve(process.cwd(), 'public', media.url.replace(/^\//, ''));
+            if (fs.existsSync(localPath)) {
+              fs.unlinkSync(localPath);
+            }
           } catch (e) {
             // Ignore file unlink error
           }

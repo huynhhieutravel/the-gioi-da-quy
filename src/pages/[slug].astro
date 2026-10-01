@@ -24,7 +24,7 @@ const cleanSlug = rawSlug.replace(/\.html$/i, '').trim();
 // Reserved slugs that should not match static pages
 const reserved = ['admin', 'api', 'san-pham', 'kien-thuc', 'tin-tuc', 'phong-thuy', 'favicon.ico', 'favicon.png'];
 if (reserved.includes(cleanSlug)) {
-  if (cleanSlug === 'tin-tuc') return Astro.redirect('/kien-thuc', 301);
+  if (cleanSlug === 'kien-thuc') return Astro.redirect('/tin-tuc', 301);
   if (cleanSlug === 'phong-thuy') return Astro.redirect('/san-pham', 301);
   return new Response(null, { status: 404 });
 }
@@ -58,9 +58,9 @@ if (!pageDoc && aliasMap[lookupSlug]) {
   pageDoc = await db.prepare('SELECT * FROM posts WHERE slug = ?').bind(aliasMap[lookupSlug]).first<any>();
 }
 
-// If it's an article (is_page = 0) accessed at root, redirect to /kien-thuc/:slug
+// If it's an article (is_page = 0) accessed at root, redirect to /tin-tuc/:slug
 if (pageDoc && pageDoc.is_page === 0) {
-  return Astro.redirect(`/kien-thuc/${pageDoc.slug}`, 301);
+  return Astro.redirect(`/tin-tuc/${pageDoc.slug}`, 301);
 }
 
 if (!pageDoc) {

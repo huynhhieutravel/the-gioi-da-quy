@@ -13,6 +13,6 @@ export interface D1Database {
   batch(statements: D1PreparedStatement[]): Promise<any[]>;
 }
 
-export function getDb(locals?: any): D1Database {
+export function getDb(_locals?: any): D1Database {
   return (env as any)?.DB as D1Database;
 }
