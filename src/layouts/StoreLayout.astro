@@ -59,6 +59,7 @@ const defaultOrgSchema = {
   "priceRange": "$$",
   "currenciesAccepted": "VND",
   "paymentAccepted": "Tiền mặt, Chuyển khoản ngân hàng, Thẻ tín dụng, Thu hộ COD toàn quốc",
+  "email": settings.email || "thegioidaquy.net@gmail.com",
   "founder": {
     "@type": "Person",
     "name": "Đoàn Quốc Sơn",
@@ -107,7 +108,8 @@ const defaultOrgSchema = {
     "closes": "21:30"
   },
   "sameAs": [
-    "https://zalo.me/0909468057"
+    "https://zalo.me/0909468057",
+    ...(settings.facebook ? [settings.facebook] : [])
   ]
 };
 ---

@@ -25,9 +25,7 @@ Disallow: /wp-includes/
 
 # Image search indexing
 User-agent: Googlebot-Image
-Allow: /uploads/
-Allow: /favicon.png
-Allow: /favicon.ico
+Allow: /
 Disallow: /admin/
 Disallow: /api/
 
