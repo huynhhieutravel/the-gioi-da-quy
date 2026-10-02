@@ -3,6 +3,16 @@ import { getDb } from '../lib/db';
 
 export const prerender = false;
 
+function escapeXml(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 export const GET: APIRoute = async ({ locals, url, site }) => {
   const db = getDb(locals);
   const domain = site ? site.toString().replace(/\/$/, '') : `${url.protocol}//${url.host}`;
@@ -38,11 +48,11 @@ export const GET: APIRoute = async ({ locals, url, site }) => {
     }
   }
 
-  // Products
-  const products = (await db.prepare('SELECT slug, updated_at FROM products').all<{ slug: string; updated_at?: string }>()).results || [];
+  // Products with images for Google Image Search indexing
+  const products = (await db.prepare('SELECT slug, name, thumbnail, updated_at FROM products').all<{ slug: string; name: string; thumbnail?: string; updated_at?: string }>()).results || [];
 
-  // Articles
-  const articles = (await db.prepare("SELECT slug, updated_at, published_at FROM posts WHERE is_page = 0 AND status = 'published'").all<{ slug: string; updated_at?: string; published_at?: string }>()).results || [];
+  // Articles with images
+  const articles = (await db.prepare("SELECT slug, title, thumbnail, updated_at, published_at FROM posts WHERE is_page = 0 AND status = 'published'").all<{ slug: string; title: string; thumbnail?: string; updated_at?: string; published_at?: string }>()).results || [];
 
   const xmlEntries: string[] = [];
 
@@ -57,26 +67,39 @@ export const GET: APIRoute = async ({ locals, url, site }) => {
 
   for (const p of products) {
     const mod = p.updated_at ? p.updated_at.split(' ')[0] : now;
+    let imageXml = '';
+    if (p.thumbnail) {
+      const imgUrl = p.thumbnail.startsWith('http') ? p.thumbnail : `${domain}${p.thumbnail.startsWith('/') ? '' : '/'}${p.thumbnail}`;
+      imageXml = `\n    <image:image>\n      <image:loc>${escapeXml(imgUrl)}</image:loc>\n      <image:title>${escapeXml(p.name)}</image:title>\n    </image:image>`;
+    }
+
     xmlEntries.push(`  <url>
     <loc>${domain}/san-pham/${p.slug}</loc>
     <lastmod>${mod}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.8</priority>${imageXml}
   </url>`);
   }
 
   for (const a of articles) {
     const mod = a.updated_at ? a.updated_at.split(' ')[0] : (a.published_at || now);
+    let imageXml = '';
+    if (a.thumbnail) {
+      const imgUrl = a.thumbnail.startsWith('http') ? a.thumbnail : `${domain}${a.thumbnail.startsWith('/') ? '' : '/'}${a.thumbnail}`;
+      imageXml = `\n    <image:image>\n      <image:loc>${escapeXml(imgUrl)}</image:loc>\n      <image:title>${escapeXml(a.title)}</image:title>\n    </image:image>`;
+    }
+
     xmlEntries.push(`  <url>
     <loc>${domain}/tin-tuc/${a.slug}</loc>
     <lastmod>${mod}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.7</priority>${imageXml}
   </url>`);
   }
 
   const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${xmlEntries.join('\n')}
 </urlset>`;
 
