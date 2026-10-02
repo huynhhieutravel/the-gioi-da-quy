@@ -24,6 +24,13 @@ const RESERVED_PREFIXES = [
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const url = new URL(context.request.url);
+
+  // 1. Enforce strict non-trailing slash policy (301 redirect /path/ to /path)
+  if (url.pathname.length > 1 && url.pathname.endsWith('/')) {
+    const cleanPath = url.pathname.replace(/\/+$/, '') || '/';
+    return Response.redirect(`${cleanPath}${url.search}`, 301);
+  }
+
   const pathname = url.pathname.replace(/^\/|\/$/g, '');
 
   // If root or contains slash (sub-paths) or matches reserved system routes, pass through
