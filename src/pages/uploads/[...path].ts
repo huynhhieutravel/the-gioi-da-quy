@@ -28,9 +28,22 @@ export const GET: APIRoute = async ({ params, request }) => {
   }
 
   const key = `uploads/${rawPath}`;
-  const object = await bucket.get(key);
+  let object = bucket ? await bucket.get(key) : null;
+
+  if (!object && bucket) {
+    try {
+      const decodedKey = `uploads/${decodeURIComponent(rawPath)}`;
+      if (decodedKey !== key) {
+        object = await bucket.get(decodedKey);
+      }
+    } catch (_) {}
+  }
 
   if (!object) {
+    const isImage = /\.(jpe?g|png|webp|gif|svg|avif|ico)$/i.test(rawPath);
+    if (isImage && !rawPath.includes('Phongthuy-HoaMocLan-thegioidaquy.jpg')) {
+      return Response.redirect(new URL('/uploads/site_assets/Phongthuy-HoaMocLan-thegioidaquy.jpg', request.url), 302);
+    }
     return new Response('File not found in media storage', { status: 404 });
   }
 

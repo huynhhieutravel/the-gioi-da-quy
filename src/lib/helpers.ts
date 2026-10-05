@@ -20,7 +20,15 @@ export function renderMarkdown(content: string): string {
         .replace(/&amp;/g, '&')
         .replace(/&quot;/g, '"');
     }
-    return marked.parse(processed, { breaks: true, gfm: true }) as string;
+    // Eliminate mixed-content HTTP links to thegioidaquy.net
+    processed = processed.replace(/http:\/\/(www\.)?thegioidaquy\.net\//gi, '/');
+
+    let html = marked.parse(processed, { breaks: true, gfm: true }) as string;
+    
+    // Ensure all <img> tags have onerror fallback and loading="lazy"
+    html = html.replace(/<img\s+(?![^>]*\bonerror=)/gi, '<img loading="lazy" decoding="async" onerror="this.onerror=null;this.src=\'/uploads/site_assets/Phongthuy-HoaMocLan-thegioidaquy.jpg\';" ');
+
+    return html;
   } catch (e) {
     return content;
   }
