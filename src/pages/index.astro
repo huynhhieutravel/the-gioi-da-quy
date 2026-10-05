@@ -174,10 +174,19 @@ const websiteSchema = {
           : p.feng_shui_element === 'Hỏa' ? 'badge-hoa'
           : p.feng_shui_element === 'Thổ' ? 'badge-tho' : 'badge-damenh';
 
+        const safeThumb = (p.thumbnail && !p.thumbnail.startsWith('https://web.archive.org'))
+          ? p.thumbnail
+          : '/uploads/site_assets/Phongthuy-HoaMocLan-thegioidaquy.jpg';
+
         return (
           <div class="product-card">
             <div class="product-card-thumb">
-              <img src={p.thumbnail || '/placeholder-gem.jpg'} alt={p.name} loading="lazy" />
+              <img 
+                src={safeThumb} 
+                alt={p.name} 
+                loading="lazy" 
+                onerror="this.onerror=null;this.src='/uploads/site_assets/Phongthuy-HoaMocLan-thegioidaquy.jpg'"
+              />
               <span class={`product-element-tag ${badgeClass}`}>Mệnh {p.feng_shui_element}</span>
             </div>
             <div class="product-card-body">

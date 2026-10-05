@@ -35,7 +35,7 @@ if (element) {
 
 const whereSql = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
-const grandTotal = (await db.prepare('SELECT COUNT(*) as count FROM products').first<{ count: number }>())?.count || 380;
+const grandTotal = (await db.prepare('SELECT COUNT(*) as count FROM products').first<{ count: number }>())?.count || 3122;
 const totalCount = (await db.prepare(`SELECT COUNT(*) as count FROM products ${whereSql}`).bind(...params).first<{ count: number }>())?.count || 0;
 const totalPages = Math.ceil(totalCount / pageSize) || 1;
 
@@ -260,10 +260,10 @@ const catalogSchema = {
             <h3 style="font-size: 18px; color: #fff; margin-bottom: 8px;">Không tìm thấy vật phẩm phù hợp</h3>
             <p style="color: var(--text-dim); font-size: 14px; max-width: 480px; margin: 0 auto 24px; line-height: 1.6;">
               {q ? `Không có kết quả nào khớp với từ khóa "${q}". ` : ''}
-              Vui lòng thử lại với tên loại đá khác hoặc xóa bộ lọc để xem toàn bộ 380 sản phẩm.
+              Vui lòng thử lại với tên loại đá khác hoặc xóa bộ lọc để xem toàn bộ {grandTotal} sản phẩm.
             </p>
             <a href="/san-pham" class="btn-primary" style="display: inline-block; padding: 10px 24px;">
-              Xem Toàn Bộ 380 Sản Phẩm
+              Xem Toàn Bộ {grandTotal} Sản Phẩm
             </a>
           </div>
         ) : (
@@ -275,10 +275,19 @@ const catalogSchema = {
                 : p.feng_shui_element === 'Hỏa' ? 'badge-hoa'
                 : p.feng_shui_element === 'Thổ' ? 'badge-tho' : 'badge-damenh';
 
+              const safeThumb = (p.thumbnail && !p.thumbnail.startsWith('https://web.archive.org'))
+                ? p.thumbnail
+                : '/uploads/site_assets/Phongthuy-HoaMocLan-thegioidaquy.jpg';
+
               return (
                 <div class="product-card">
                   <div class="product-card-thumb">
-                    <img src={p.thumbnail || '/placeholder-gem.jpg'} alt={p.name} loading="lazy" />
+                    <img 
+                      src={safeThumb} 
+                      alt={p.name} 
+                      loading="lazy"
+                      onerror="this.onerror=null;this.src='/uploads/site_assets/Phongthuy-HoaMocLan-thegioidaquy.jpg'"
+                    />
                     <span class={`product-element-tag ${badgeClass}`}>Mệnh {p.feng_shui_element}</span>
                   </div>
                   <div class="product-card-body">

@@ -132,10 +132,11 @@ const productSchema = {
         <div style="background: var(--store-card); border: 1px solid var(--store-border); border-radius: 16px; overflow: hidden; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; position: relative;">
           <img 
             id="main-product-img" 
-            src={product.thumbnail || '/placeholder-gem.jpg'} 
+            src={(product.thumbnail && !product.thumbnail.startsWith('https://web.archive.org')) ? product.thumbnail : '/uploads/site_assets/Phongthuy-HoaMocLan-thegioidaquy.jpg'} 
             alt={product.name} 
             fetchpriority="high"
             decoding="async"
+            onerror="this.onerror=null;this.src='/uploads/site_assets/Phongthuy-HoaMocLan-thegioidaquy.jpg'"
             style="width: 100%; height: 100%; object-fit: contain; max-height: 520px;" 
           />
           <span class={`product-element-tag ${badgeClass}`} style="top: 16px; left: 16px; font-size: 13px;">
@@ -251,21 +252,31 @@ const productSchema = {
           Sản Phẩm Cùng Dòng {product.category_name}
         </h2>
         <div class="products-grid">
-          {relatedProducts.map((rp) => (
-            <div class="product-card">
-              <div class="product-card-thumb">
-                <img src={rp.thumbnail || '/placeholder-gem.jpg'} alt={rp.name} loading="lazy" />
-              </div>
-              <div class="product-card-body">
-                <span class="product-cat-label">{rp.gemstone_type}</span>
-                <a href={`/san-pham/${rp.slug}`} class="product-card-title">{rp.name}</a>
-                <div class="product-price-box">
-                  <span class="price-current">{rp.price_text}</span>
-                  <a href={`/san-pham/${rp.slug}`} class="btn-detail-link">Xem</a>
+          {relatedProducts.map((rp) => {
+            const rpSafeThumb = (rp.thumbnail && !rp.thumbnail.startsWith('https://web.archive.org'))
+              ? rp.thumbnail
+              : '/uploads/site_assets/Phongthuy-HoaMocLan-thegioidaquy.jpg';
+            return (
+              <div class="product-card">
+                <div class="product-card-thumb">
+                  <img 
+                    src={rpSafeThumb} 
+                    alt={rp.name} 
+                    loading="lazy" 
+                    onerror="this.onerror=null;this.src='/uploads/site_assets/Phongthuy-HoaMocLan-thegioidaquy.jpg'"
+                  />
+                </div>
+                <div class="product-card-body">
+                  <span class="product-cat-label">{rp.gemstone_type}</span>
+                  <a href={`/san-pham/${rp.slug}`} class="product-card-title">{rp.name}</a>
+                  <div class="product-price-box">
+                    <span class="price-current">{rp.price_text}</span>
+                    <a href={`/san-pham/${rp.slug}`} class="btn-detail-link">Xem</a>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     )}
