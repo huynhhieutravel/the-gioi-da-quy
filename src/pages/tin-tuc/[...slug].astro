@@ -53,11 +53,12 @@ if (legacyMap[normalizedSlug] && legacyMap[normalizedSlug] !== `/tin-tuc/${rawSl
 // 1. First priority: Exact match with normalizedCleaned (preserves year suffixes like -2015)
 let matchedPost = await db.prepare('SELECT * FROM posts WHERE slug = ?').bind(normalizedCleaned).first<any>();
 
-// 2. Second priority: If hasNumericId, try matching numeric ID
+// 2. Second priority: If hasNumericId, try matching numeric ID directly in database
 if (!matchedPost && hasNumericId) {
   const numId = (cleaned.match(/-(\d+)$/) || [])[1];
   if (numId) {
-    matchedPost = await db.prepare('SELECT * FROM posts WHERE slug LIKE ? LIMIT 1').bind(`%-${numId}`).first<any>();
+    matchedPost = await db.prepare('SELECT * FROM posts WHERE id = ? OR slug = ? OR slug LIKE ? LIMIT 1')
+      .bind(`art-${numId}`, normalizedCleaned, `%-${numId}`).first<any>();
   }
 }
 

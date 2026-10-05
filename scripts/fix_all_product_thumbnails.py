@@ -205,9 +205,11 @@ def main():
         pools[('any', gem)].append(f)
         pools[(form, 'any')].append(f)
 
-    # Load all products
-    with open(REMOTE_PRODUCTS_JSON, "r", encoding="utf-8") as f:
-        products = json.load(f)[0]["results"]
+    conn = sqlite3.connect(SQLITE_DB)
+    c = conn.cursor()
+    c.execute("SELECT id, slug, name, category_name, gemstone_type, thumbnail FROM products")
+    rows = c.fetchall()
+    products = [{"id": r[0], "slug": r[1], "name": r[2], "category_name": r[3], "gemstone_type": r[4], "thumbnail": r[5]} for r in rows]
     print(f"Tổng số sản phẩm cần kiểm tra & chuẩn hóa ảnh: {len(products)}")
 
     sql_statements = []
@@ -216,9 +218,6 @@ def main():
     matched_pool_gem = 0
     matched_pool_form = 0
     kept_existing = 0
-
-    conn = sqlite3.connect(SQLITE_DB)
-    c = conn.cursor()
 
     for idx, p in enumerate(products):
         p_id = p["id"]
@@ -320,6 +319,16 @@ def main():
         c.execute("UPDATE products SET thumbnail = ?, images = ? WHERE id = ?", (target_file, images_json, p_id))
 
     conn.commit()
+
+    # Refresh JSON cache
+    c.execute("SELECT id, slug, name, sku, price, price_text, category_name, gemstone_type, feng_shui_element, thumbnail, views FROM products ORDER BY id ASC")
+    cols = [d[0] for d in c.description]
+    cached_rows = [dict(zip(cols, r)) for r in c.fetchall()]
+    cache_path = os.path.join(WORKSPACE_DIR, "src", "data", "products_catalog_cache.json")
+    with open(cache_path, "w", encoding="utf-8") as f:
+        json.dump(cached_rows, f, ensure_ascii=False, separators=(',', ':'))
+    print(f"Đã cập nhật bộ nhớ cache {cache_path} ({len(cached_rows)} sản phẩm)")
+
     conn.close()
 
     # Save SQL file for Cloudflare D1

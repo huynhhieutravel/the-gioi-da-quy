@@ -75,22 +75,22 @@ export function createFallbackDb(): D1Database {
               return { results: [{ count: filtered.length }] as unknown as T[], success: true };
             }
 
-            // Slug match for single product
-            if (q.includes('where slug = ?') || q.includes('where slug like ?')) {
-              const param = (boundParams[0] || '').toString().toLowerCase().replace(/%/g, '');
-              const found = (productsData as any[]).find(p => 
-                p.slug.toLowerCase() === param || 
-                p.slug.toLowerCase().startsWith(param) ||
-                p.slug.toLowerCase().includes(param)
-              );
-              return { results: (found ? [found] : []) as unknown as T[], success: true };
-            }
-
-            // SKU match
-            if (q.includes('sku = ?')) {
-              const skuParam = (boundParams[0] || '').toString().toLowerCase();
-              const found = (productsData as any[]).find(p => (p.sku || '').toLowerCase() === skuParam);
-              return { results: (found ? [found] : []) as unknown as T[], success: true };
+            // ID, SKU, or Slug match for single product
+            if (q.includes('where') && (q.includes('slug') || q.includes('sku') || q.includes('id'))) {
+              for (const rawParam of boundParams) {
+                const param = (rawParam || '').toString().toLowerCase().replace(/%/g, '');
+                if (!param) continue;
+                const found = (productsData as any[]).find(p => 
+                  p.id.toLowerCase() === param ||
+                  (p.sku || '').toLowerCase() === param ||
+                  p.slug.toLowerCase() === param || 
+                  p.slug.toLowerCase().endsWith(param) ||
+                  p.slug.toLowerCase().includes(param)
+                );
+                if (found) {
+                  return { results: [found] as unknown as T[], success: true };
+                }
+              }
             }
 
             // Related products: category_name = ? AND id != ? LIMIT ?
@@ -136,15 +136,21 @@ export function createFallbackDb(): D1Database {
 
           // 4. Posts
           if (q.includes('from posts')) {
-            // Slug match
-            if (q.includes('where slug = ?') || q.includes('where slug like ?')) {
-              const param = (boundParams[0] || '').toString().toLowerCase().replace(/%/g, '');
-              const found = (postsData as any[]).find(p => 
-                p.slug.toLowerCase() === param || 
-                p.slug.toLowerCase().endsWith(param) ||
-                p.slug.toLowerCase().includes(param)
-              );
-              return { results: (found ? [found] : []) as unknown as T[], success: true };
+            // ID or Slug match
+            if (q.includes('where') && (q.includes('slug') || q.includes('id'))) {
+              for (const rawParam of boundParams) {
+                const param = (rawParam || '').toString().toLowerCase().replace(/%/g, '');
+                if (!param) continue;
+                const found = (postsData as any[]).find(p => 
+                  p.id.toLowerCase() === param ||
+                  p.slug.toLowerCase() === param || 
+                  p.slug.toLowerCase().endsWith(param) ||
+                  p.slug.toLowerCase().includes(param)
+                );
+                if (found) {
+                  return { results: [found] as unknown as T[], success: true };
+                }
+              }
             }
 
             // Count

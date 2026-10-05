@@ -56,8 +56,8 @@ let product = await db.prepare('SELECT slug FROM products WHERE slug = ?').bind(
 const idMatch = rawSlug.match(/-(\d+)$/);
 if (!product && idMatch) {
   const numId = idMatch[1];
-  product = await db.prepare('SELECT slug FROM products WHERE sku = ? OR slug LIKE ? LIMIT 1')
-    .bind(`TGDQ-${numId}`, `%-${numId}`).first<{ slug: string }>();
+  product = await db.prepare('SELECT slug FROM products WHERE id = ? OR sku = ? OR slug LIKE ? LIMIT 1')
+    .bind(`prod-${numId}`, `TGDQ-${numId}`, `%-${numId}`).first<{ slug: string }>();
 }
 
 // 4. Try stripped numeric ID
