@@ -16,12 +16,12 @@ let cleaned = rawSlug.replace(/\.html$/i, '').trim();
 const hasNumericId = /-\d+$/.test(cleaned);
 const cleanSlugWithoutId = cleaned.replace(/-\d+$/, '');
 const normalizedSlug = slugify(cleanSlugWithoutId);
+const normalizedCleaned = slugify(cleaned);
 
 // Comprehensive static alias mapping for legacy news URLs
 const legacyMap: Record<string, string> = {
   // Static pages mapped from old /tin-tuc/
   'chinh-sach-va-quy-dinh-chung': '/chinh-sach-va-quy-dinh',
-  'mua-hang-va-chinh-sach-bao-hanh-da': '/chinh-sach-va-quy-dinh',
   'hinh-thuc-thanh-toan': '/hinh-thuc-thanh-toan',
   'chinh-sach-giao-nhan': '/giao-nhan',
   'cach-van-chuyen-va-giao-nhan-cua-thegioidaquy': '/giao-nhan',
@@ -50,16 +50,29 @@ if (legacyMap[normalizedSlug] && legacyMap[normalizedSlug] !== `/tin-tuc/${rawSl
   return Astro.redirect(legacyMap[normalizedSlug], 301);
 }
 
-// Check database for matching post or article
-let matchedPost = await db.prepare('SELECT * FROM posts WHERE slug = ?').bind(normalizedSlug).first<any>();
+// 1. First priority: Exact match with normalizedCleaned (preserves year suffixes like -2015)
+let matchedPost = await db.prepare('SELECT * FROM posts WHERE slug = ?').bind(normalizedCleaned).first<any>();
 
+// 2. Second priority: If hasNumericId, try matching numeric ID
+if (!matchedPost && hasNumericId) {
+  const numId = (cleaned.match(/-(\d+)$/) || [])[1];
+  if (numId) {
+    matchedPost = await db.prepare('SELECT * FROM posts WHERE slug LIKE ? LIMIT 1').bind(`%-${numId}`).first<any>();
+  }
+}
+
+// 3. Third priority: Try without trailing numeric ID
+if (!matchedPost && hasNumericId) {
+  matchedPost = await db.prepare('SELECT * FROM posts WHERE slug = ?').bind(normalizedSlug).first<any>();
+}
+
+// 4. Fourth priority: Partial match for fuzzy legacy URLs
 if (!matchedPost) {
-  // Try matching with partial slug or like query
   matchedPost = await db.prepare('SELECT * FROM posts WHERE slug LIKE ? LIMIT 1').bind(`%${normalizedSlug.slice(0, 20)}%`).first<any>();
 }
 
 if (!matchedPost) {
-  return Astro.rewrite('/404');
+  return Astro.redirect('/tin-tuc', 301);
 }
 
 // If matched post is a page, redirect to its clean root URL
@@ -67,8 +80,8 @@ if (matchedPost.is_page === 1) {
   return Astro.redirect(`/${matchedPost.slug}`, 301);
 }
 
-// If incoming URL has .html extension or legacy numeric ID, redirect to clean URL
-if (hasHtmlExt || hasNumericId || rawSlug !== matchedPost.slug) {
+// If incoming URL differs from canonical slug or has .html extension, redirect to canonical clean URL
+if (rawSlug !== matchedPost.slug || hasHtmlExt) {
   return Astro.redirect(`/tin-tuc/${matchedPost.slug}`, 301);
 }
 
